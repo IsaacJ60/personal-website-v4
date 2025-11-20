@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     siteName: "Isaac Jiang",
     images: [
       {
-        url: "/og.png",
+        url: "/og.jpg",
         width: 1200,
         height: 630,
         alt: "Isaac Jiang Portfolio",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Isaac Jiang",
     description: "CS @ University of Waterloo, Incoming SWE Intern @ SAP",
-    images: ["/og.png"],
+    images: ["/og.jpg"],
   },
 };
 
