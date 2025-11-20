@@ -210,15 +210,24 @@ export default function Home() {
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '16px', gap: '8px' }}>
-                <a href='https://cs.uwatering.com/#your-site-here?nav=prev'>←</a>
-                <a href='https://cs.uwatering.com/#your-site-here' target='_blank'>
+                <a href='https://cs.uwatering.com/#https://isaacjiang.ca?nav=prev'>←</a>
+                <a href='https://cs.uwatering.com/#https://isaacjiang.ca' target='_blank'>
+                  <img
+                    src='https://cs.uwatering.com/icon.black.svg'
+                    alt='CS Webring'
+                    className="block dark:hidden"
+                    style={{ width: '24px', height: 'auto', opacity: 0.8 }}
+                  />
+
                   <img
                     src='https://cs.uwatering.com/icon.white.svg'
                     alt='CS Webring'
+                    className="hidden dark:block"
                     style={{ width: '24px', height: 'auto', opacity: 0.8 }}
                   />
                 </a>
-                <a href='https://cs.uwatering.com/#your-site-here?nav=next'>→</a>
+
+                <a href='https://cs.uwatering.com/#https://isaacjiang.ca?nav=next'>→</a>
               </div>
             </section>
           )}
