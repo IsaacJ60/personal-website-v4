@@ -125,7 +125,7 @@ export function ExperienceTimeline() {
               border border-border bg-background
             " />
 
-            <div className="ml-6 p-4 rounded-lg border border-border bg-card/40 hover:bg-card transition-colors backdrop-blur-sm">
+            <div className="ml-6 p-4 rounded-lg border border-border bg-card/20 hover:bg-card transition-colors backdrop-blur-sm">
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">

@@ -24,6 +24,11 @@ export default function Home() {
   return (
 
     <main className="flex justify-center px-6 py-20 mt-[-100px]">
+      {/* Mobile floating theme switch */}
+      <div className="fixed top-4 right-4 z-50 sm:hidden">
+        <ThemeSwitch />
+      </div>
+
 
       <div className="pointer-events-none fixed inset-0 -z-10">
         <Particles
@@ -44,37 +49,36 @@ export default function Home() {
 
 
           {/* TOP HEADER ROW — Name + Theme Switch */}
-          <header className="flex items-center justify-between">
-            <div className="flex items-end gap-4">
-              <h1 className="text-4xl font-semibold tracking-tight">
+          {/* TOP HEADER ROW — Name + Theme Switch */}
+          <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            {/* Left: name + avatars */}
+            <div className="flex flex-wrap items-end gap-3 sm:gap-4">
+              <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight">
                 Isaac Jiang
               </h1>
 
               <div className="*:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2">
-                <Avatar>
+                <Avatar className="h-8 w-8 sm:h-9 sm:w-9 mb-[-1]">
                   <AvatarImage src="images/pfp2.jpg" alt="@isaacJ60" />
                   <AvatarFallback>IJ</AvatarFallback>
                 </Avatar>
-                <Avatar>
-                  <AvatarImage
-                    src="images/pfp1.png"
-                    alt="@isaacj60"
-                  />
+                <Avatar className="h-8 w-8 sm:h-9 sm:w-9 mb-[-1]">
+                  <AvatarImage src="images/pfp1.png" alt="@isaacj60" />
                   <AvatarFallback>IJ</AvatarFallback>
                 </Avatar>
-                <Avatar>
-                  <AvatarImage
-                    src="images/pfp3.jpg"
-                    alt="@eyesackle"
-                  />
+                <Avatar className="h-8 w-8 sm:h-9 sm:w-9 mb-[-1]">
+                  <AvatarImage src="images/pfp3.jpg" alt="@eyesackle" />
                   <AvatarFallback>IJ</AvatarFallback>
                 </Avatar>
               </div>
-
             </div>
 
-            <ThemeSwitch />
+            {/* Right: theme switch (desktop / tablet only) */}
+            <div className="self-start sm:self-auto hidden sm:block">
+              <ThemeSwitch />
+            </div>
           </header>
+
 
           <p className="text-muted-foreground">
             CS @ University of Waterloo, Incoming SWE Intern @ SAP
@@ -97,7 +101,7 @@ export default function Home() {
               />
             </div>
 
-            <div className="flex items-center space-x-4 text-foreground">
+            <div className="flex items-center space-x-4 text-foreground mb-3 md:mb-0 justify-center">
               <a href="https://www.linkedin.com/in/isaac6/" aria-label="LinkedIn" target="_blank" rel="noopener noreferrer">
                 <FaLinkedin size={24} />
               </a>
@@ -179,7 +183,7 @@ export default function Home() {
           {/* CONTENT SWITCHER */}
           {activeView === "default" && (
             <section className="pt-2 space-y-0 border-border">
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <div>
                   <p className="text-md uppercase text-muted-foreground tracking-wide">
                     About Me </p>
@@ -205,11 +209,22 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '16px', gap: '8px' }}>
+                <a href='https://cs.uwatering.com/#your-site-here?nav=prev'>←</a>
+                <a href='https://cs.uwatering.com/#your-site-here' target='_blank'>
+                  <img
+                    src='https://cs.uwatering.com/icon.white.svg'
+                    alt='CS Webring'
+                    style={{ width: '24px', height: 'auto', opacity: 0.8 }}
+                  />
+                </a>
+                <a href='https://cs.uwatering.com/#your-site-here?nav=next'>→</a>
+              </div>
             </section>
           )}
 
           {activeView === "projects" && (
-            <section className="pt-4 pl-10 pr-10 border-border">
+            <section className="pt-4 pl-5 pr-5 border-border">
               <FullProjectGrid />
             </section>
           )}
@@ -231,6 +246,7 @@ export default function Home() {
           )}
         </div>
       </div>
+
 
     </main>
   );

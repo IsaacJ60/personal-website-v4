@@ -58,7 +58,7 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body>
         <Providers>
-        {children}
+          {children}
         </Providers>
       </body>
     </html>

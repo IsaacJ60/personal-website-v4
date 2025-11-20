@@ -226,58 +226,91 @@ export default function ProjectGrid() {
 }
 
 export function FullProjectGrid() {
-    return (
-        <div>
-            <Carousel plugins={[Autoplay({ delay: 2500 })]} className="w-full max-w-xl">
-                <CarouselContent className="-ml-1">
-                    {Array.from({ length: FullProjects.length }).map((_, index) => (
-                        <CarouselItem key={index} className="pl-1 sm:basis-1/2 lg:basis-1/1">
-                            <div className="p-1">
-                                <Card className="h-44 border-border bg-card/60 hover:bg-card transition-colors backdrop-blur-sm">
-  <CardContent className="relative p-4 h-full">
-    <a
-      href={FullProjects[index].link}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="relative flex h-full flex-col pr-20"
-    >
-      {/* Small image in top-right */}
-      {FullProjects[index].imageUrl && (
-        <img
-          src={FullProjects[index].imageUrl}
-          alt={FullProjects[index].title}
-          className="absolute top-6 right-6 h-20 w-20 object-cover opacity-80 rounded-md border border-border"
-        />
-      )}
+  return (
+    <div className="w-full">
+      {/* --- MOBILE (vertical list) --- */}
+      <div className="sm:hidden space-y-3">
+        {FullProjects.map((p, index) => (
+          <Card
+            key={index}
+            className="border-border bg-card/20 hover:bg-card transition-colors backdrop-blur-sm"
+          >
+            <CardContent className="relative p-3 pt-0 pb-0">
+              <a
+                href={p.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="relative flex flex-col"
+              >
+                {p.imageUrl && (
+                  <img
+                    src={p.imageUrl}
+                    alt={p.title}
+                    className="absolute top-4 right-1 h-16 w-16 object-cover opacity-80 rounded-md border border-border"
+                  />
+                )}
 
-      {/* Main content */}
-      <h3 className="text-base font-semibold">
-        {FullProjects[index].title}
-      </h3>
+                <h3 className="text-base font-semibold pr-20 line-clamp-2">{p.title}</h3>
+                <p className="text-sm text-muted-foreground mt-1 pr-20 line-clamp-2">
+                  {p.description}
+                </p>
 
-      <p className="text-sm text-muted-foreground mt-1 line-clamp-2 pr-12">
-        {FullProjects[index].description}
-      </p>
+                <p className="text-xs italic mt-2 text-muted-foreground pr-20 line-clamp-2">{p.tech}</p>
+              </a>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-      {/* Tech pinned to bottom */}
-      <p className="text-xs italic mt-auto text-muted-foreground">
-        {FullProjects[index].tech}
-      </p>
-    </a>
-  </CardContent>
-</Card>
+      {/* --- DESKTOP (carousel) --- */}
+      <div className="hidden sm:block">
+        <Carousel plugins={[Autoplay({ delay: 2500 })]} className="w-full max-w-xl mx-auto">
+          <CarouselContent className="-ml-1">
+            {FullProjects.map((_, index) => (
+              <CarouselItem key={index} className="pl-1 basis-1/1">
+                <div className="p-1">
+                  <Card className="h-44 border-border bg-card/20 hover:bg-card transition-colors backdrop-blur-sm">
+                    <CardContent className="relative p-4 h-full">
+                      <a
+                        href={FullProjects[index].link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="relative flex h-full flex-col pr-20"
+                      >
+                        {FullProjects[index].imageUrl && (
+                          <img
+                            src={FullProjects[index].imageUrl}
+                            alt={FullProjects[index].title}
+                            className="absolute top-2 right-1 h-20 w-20 object-cover opacity-80 rounded-md border border-border"
+                          />
+                        )}
 
+                        <h3 className="text-base font-semibold line-clamp-2">
+                          {FullProjects[index].title}
+                        </h3>
 
-                            </div>
-                        </CarouselItem>
-                    ))}
-                </CarouselContent>
-                <CarouselPrevious />
-                <CarouselNext />
-            </Carousel>
-            <div className="text-muted-foreground py-2 text-center text-sm">
-                CS Projects Showcase (More coming soon!)
-            </div>
-        </div>
-    )
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2 pr-6">
+                          {FullProjects[index].description}
+                        </p>
+
+                        <p className="text-xs italic mt-auto text-muted-foreground">
+                          {FullProjects[index].tech}
+                        </p>
+                      </a>
+                    </CardContent>
+                  </Card>
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious />
+          <CarouselNext />
+        </Carousel>
+      </div>
+
+      <div className="text-muted-foreground py-2 text-center text-sm">
+        CS Projects Showcase (More coming soon!)
+      </div>
+    </div>
+  );
 }
