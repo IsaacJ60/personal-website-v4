@@ -81,7 +81,7 @@ export default function Home() {
 
 
           <p className="text-muted-foreground">
-            CS @ University of Waterloo, Incoming SWE Intern @ SAP
+            CS @ University of Waterloo, SWE Intern @ SAP
           </p>
 
           <section className="space-y-4 mb-4">
