@@ -22,7 +22,7 @@ type ExperienceTimelineProps = {
 
 const experiences: Experience[] = [
   {
-    role: "Incoming SWE Intern", 
+    role: "SWE Intern", 
     company: "SAP",
     period: "Jan 2026 - Aug 2026",
     description: "iXp Intern - Business Data Cloud",
