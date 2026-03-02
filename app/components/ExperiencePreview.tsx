@@ -24,8 +24,8 @@ const experiences: Experience[] = [
   {
     role: "SWE Intern", 
     company: "SAP",
-    period: "Jan 2026 - Aug 2026",
-    description: "iXp Intern - Business Data Cloud",
+    period: "Jan 2026 - Apr 2026",
+    description: "Filters and Metrics for SAP Analytics Cloud.",
   },
   {
     role: "SWE Intern",

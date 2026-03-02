@@ -8,7 +8,7 @@ import { FaLinkedin, FaGithub, FaYoutube, FaFileAlt } from "react-icons/fa";
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator"
 import { FullProjectGrid } from "./components/ProjectPreview";
-import { OptimusPrimeSpinner } from "./components/OptimusPrime";
+import PhotographyGrid from "./components/PhotographyGrid";
 import {
   Avatar,
   AvatarFallback,
@@ -16,6 +16,13 @@ import {
 } from "@/components/ui/avatar"
 import { StickerCloud, StickerGrid } from "./components/Stickers";
 import Particles from "@/components/Particles";
+
+const SOCIAL_LINKS = {
+  linkedin: "https://www.linkedin.com/in/isaac6/",
+  github: "https://github.com/IsaacJ60",
+  youtube: "https://www.youtube.com/@eyesackle",
+  resume: "https://drive.google.com/file/d/1v5q1la3g808hRPcUNbdcoXB1d3JVBp9N/view",
+} as const;
 
 
 export default function Home() {
@@ -58,18 +65,42 @@ export default function Home() {
               </h1>
 
               <div className="*:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2">
-                <Avatar className="h-8 w-8 sm:h-9 sm:w-9 mb-[-1]">
-                  <AvatarImage src="images/pfp2.jpg" alt="@isaacJ60" />
-                  <AvatarFallback>IJ</AvatarFallback>
-                </Avatar>
-                <Avatar className="h-8 w-8 sm:h-9 sm:w-9 mb-[-1]">
-                  <AvatarImage src="images/pfp1.png" alt="@isaacj60" />
-                  <AvatarFallback>IJ</AvatarFallback>
-                </Avatar>
-                <Avatar className="h-8 w-8 sm:h-9 sm:w-9 mb-[-1]">
-                  <AvatarImage src="images/pfp3.jpg" alt="@eyesackle" />
-                  <AvatarFallback>IJ</AvatarFallback>
-                </Avatar>
+                <a
+                  href={SOCIAL_LINKS.linkedin}
+                  aria-label="LinkedIn profile"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block"
+                >
+                  <Avatar className="h-8 w-8 sm:h-9 sm:w-9 mb-[-1] transition-opacity hover:opacity-90 cursor-pointer">
+                    <AvatarImage src="images/pfp2.jpg" alt="@isaacJ60" />
+                    <AvatarFallback>IJ</AvatarFallback>
+                  </Avatar>
+                </a>
+                <a
+                  href={SOCIAL_LINKS.github}
+                  aria-label="GitHub profile"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block"
+                >
+                  <Avatar className="h-8 w-8 sm:h-9 sm:w-9 mb-[-1] transition-opacity hover:opacity-90 cursor-pointer">
+                    <AvatarImage src="images/pfp1.png" alt="@isaacj60" />
+                    <AvatarFallback>IJ</AvatarFallback>
+                  </Avatar>
+                </a>
+                <a
+                  href={SOCIAL_LINKS.youtube}
+                  aria-label="YouTube channel"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block"
+                >
+                  <Avatar className="h-8 w-8 sm:h-9 sm:w-9 mb-[-1] transition-opacity hover:opacity-90 cursor-pointer">
+                    <AvatarImage src="images/pfp3.jpg" alt="@eyesackle" />
+                    <AvatarFallback>IJ</AvatarFallback>
+                  </Avatar>
+                </a>
               </div>
             </div>
 
@@ -102,16 +133,16 @@ export default function Home() {
             </div>
 
             <div className="flex items-center space-x-4 text-foreground mb-3 md:mb-0 justify-center">
-              <a href="https://www.linkedin.com/in/isaac6/" aria-label="LinkedIn" target="_blank" rel="noopener noreferrer">
+              <a href={SOCIAL_LINKS.linkedin} aria-label="LinkedIn" target="_blank" rel="noopener noreferrer">
                 <FaLinkedin size={24} />
               </a>
-              <a href="https://github.com/IsaacJ60" aria-label="GitHub" target="_blank" rel="noopener noreferrer">
+              <a href={SOCIAL_LINKS.github} aria-label="GitHub" target="_blank" rel="noopener noreferrer">
                 <FaGithub size={24} />
               </a>
-              <a href="https://www.youtube.com/@eyesackle" aria-label="YouTube" target="_blank" rel="noopener noreferrer">
+              <a href={SOCIAL_LINKS.youtube} aria-label="YouTube" target="_blank" rel="noopener noreferrer">
                 <FaYoutube size={24} />
               </a>
-              <a href="https://drive.google.com/file/d/1v5q1la3g808hRPcUNbdcoXB1d3JVBp9N/view" aria-label="Resume" target="_blank" rel="noopener noreferrer">
+              <a href={SOCIAL_LINKS.resume} aria-label="Resume" target="_blank" rel="noopener noreferrer">
                 <FaFileAlt size={24} />
               </a>
             </div>
@@ -248,9 +279,9 @@ export default function Home() {
           )}
 
           {activeView === "more" && (
-            <section className="pt-4 space-y-6 border-border">
-
-              <OptimusPrimeSpinner />
+            <section className="pt-2 space-y-6 border-border">
+              <PhotographyGrid />
+              {/* <OptimusPrimeSpinner /> */}
             </section>
           )}
         </div>

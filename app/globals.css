@@ -155,3 +155,7 @@ body {
   fill: var(--popover);
   stroke: var(--border);
 }
+
+.photography-grid .react-photo-album--image {
+  border-radius: var(--radius-sm);
+}
