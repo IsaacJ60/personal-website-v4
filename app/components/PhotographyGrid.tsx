@@ -19,7 +19,6 @@ const PHOTOS: Photo[] = [
     { src: "/images/camera/AML05803.jpg", width: 3937, height: 2433, alt: "Photography shot AML05803" },
     { src: "/images/camera/AML05498.jpg", width: 6026, height: 4024, alt: "Photography shot AML05498" },
     { src: "/images/camera/AML05871.jpg", width: 4255, height: 2630, alt: "Photography shot AML05871" },
-    { src: "/images/camera/AML05500.jpg", width: 3168, height: 1782, alt: "Photography shot AML05500" },
 ];
 
 export default function PhotographyGrid() {
