@@ -15,7 +15,7 @@ const PHOTOS: Photo[] = [
     { src: "/images/camera/AML05707_01.jpg", width: 2058, height: 1374, alt: "Photography shot AML05707_01" },
     { src: "/images/camera/AML05782.jpg", width: 4656, height: 1701, alt: "Photography shot AML05782" },
     { src: "/images/camera/AML05741.jpg", width: 3878, height: 5973, alt: "Photography shot AML05741" },
-    { src: "/images/camera/AML05803.jpg", width: 3937, height: 2433, alt: "Photography shot AML05803" },
+    { src: "/images/camera/AML05924.jpg", width: 4402, height: 2939, alt: "Photography shot AML05803" },
     { src: "/images/camera/AML05498.jpg", width: 6026, height: 4024, alt: "Photography shot AML05498" },
     { src: "/images/camera/AML05871.jpg", width: 4255, height: 2630, alt: "Photography shot AML05871" },
 ];
