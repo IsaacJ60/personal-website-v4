@@ -10,16 +10,12 @@ import "yet-another-react-lightbox/styles.css";
 import "yet-another-react-lightbox/plugins/thumbnails.css";
 
 const PHOTOS: Photo[] = [
-    { src: "/images/camera/AML06129.jpg", width: 4673, height: 3417, alt: "Photography shot AML05497" },
-    { src: "/images/camera/AML05832.jpg", width: 2806, height: 1874, alt: "Photography shot AML05832" },
-    { src: "/images/camera/AML05988.jpg", width: 4333, height: 2678, alt: "Photography shot AML05988" },
-    { src: "/images/camera/AML06293.jpg", width: 5560, height: 3932, alt: "Photography shot AML05707_01" },
-    { src: "/images/camera/AML06407.jpg", width: 6026, height: 4024, alt: "Photography shot AML05782" },
-    { src: "/images/camera/AML05726.jpg", width: 5272, height: 3520, alt: "Photography shot AML05741" },
-    { src: "/images/camera/AML06125_02.jpg", width: 5787, height: 3683, alt: "Photography shot AML05803" },
-    { src: "/images/camera/AML05498.jpg", width: 6026, height: 4024, alt: "Photography shot AML05498" },
-    { src: "/images/camera/AML06136.jpg", width: 5539, height: 3927, alt: "Photography shot AML05624" },
-    { src: "/images/camera/AML05871.jpg", width: 4255, height: 2630, alt: "Photography shot AML05871" },
+    { src: "/images/camera/AML07020_07.jpg", width: 5264, height: 3948, alt: "RAVEN CLOSE UP" },
+    { src: "/images/camera/AML06293_09.jpg", width: 4240, height: 3180, alt: "CANOPY PARACHUTE" },
+    { src: "/images/camera/AML06129_03.jpg", width: 4914, height: 3743, alt: "TWO UMBRELLA" },
+    { src: "/images/camera/AML06994_01.jpg", width: 5368, height: 4023, alt: "RAVEN SIDE PROFILE" },
+    { src: "/images/camera/AML05828_09.jpg", width: 2744, height: 1832, alt: "MOON AND PLANE" },
+    { src: "/images/camera/AML05988_02.jpg", width: 4333, height: 2678, alt: "SUNSET SILLOUETTE" },
 ];
 
 export default function PhotographyGrid() {
