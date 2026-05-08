@@ -29,7 +29,7 @@ const STICKERS: Sticker[] = [
         id: "youtube",
         label: "Videos",
         imageSrc: "/images/youtube.webp",
-        href: "https://www.youtube.com/@eyesackle",
+        href: "https://www.isaacjiang.ca/photo",
         x: 23,
         y: 2,
     },
