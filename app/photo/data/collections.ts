@@ -72,6 +72,13 @@ const PHOTO_LIBRARY: CatalogPhoto[] = [
   photo("twin-falls-lynn-canyon", "/images/camera/Twin Falls in Lynn Canyon.jpg", "Twin Falls in Lynn Canyon", "2026-05-02", ["Landscapes"], "Twin falls", "Twin cascades in Lynn Canyon, capturing the power and grace of flowing water.", "Lynn Canyon Park, Vancouver"),
   photo("warm-iona-sunset", "/images/camera/Warm Iona Sunset.jpg", "Warm Iona Sunset", "2026-04-08", ["Landscapes"], "Warm Iona sunset", "A golden sunset on Iona Beach, where sand, sky, and light converge in warmth.", "Iona Beach, Richmond"),
   photo("mountain-vancouver", "/images/camera/Mountain Vancouver.jpg", "Mountain Vancouver", "2026-05-03", ["Urban Nature"], "Mountain Vancouver", "A mountain framed against the urban backdrop of Vancouver, nature and city in proximity.", "Mt. Gardner, Bowen Island"),
+  photo("cloud-mountains-at-sea", "/images/camera/Cloud Mountains at Sea.jpg", "Cloud Mountains at Sea", "2026-02-14", ["Landscapes"], "Cloud mountain at sea", "Clouds forming over mountains at sea.", "Garry Point Park, Richmond"),
+  photo("ethereal-umbrellas", "/images/camera/Ethereal Umbrellas.jpg", "Ethereal Umbrellas", "2026-03-05", ["Abstract & Detail"], "Ethereal umbrellas", "Umbrellas floating in an ethereal landscape.", "Yaletown, Vancouver"),
+  photo("umbrella-branches", "/images/camera/Umbrella Branches.jpg", "Umbrella Branches", "2026-03-05", ["Abstract & Detail"], "Umbrella branches", "A pink umbrella in front of sprawling branches.", "Yaletown, Vancouver"),
+  photo("garry-point-structure", "/images/camera/Garry Point Structure.jpg", "Garry Point Structure", "2026-03-07", ["Landscapes"], "Garry point structure", "A structural element in Garry Point Park.", "Garry Point Park, Richmond"),
+  photo("stationary-raven", "/images/camera/Stationary Raven.jpg", "Stationary Raven", "2026-03-21", ["Wildlife"], "Stationary raven", "A raven standing on a cliff.", "Tunnel Bluffs, BC"),
+  photo("eagle-pair", "/images/camera/Eagle Pair.jpg", "Eagle Pair", "2026-03-27", ["Wildlife"], "Eagle pair", "Two eagles pictured together.", "West Dyke Trail, Richmond"),
+  photo("couple-under-blossoms", "/images/camera/Couple Under Blossoms.jpg", "Couple Under Blossoms", "2026-03-27", ["Portraits"], "Couple under blossoms", "A couple standing under cherry blossoms.", "Garry Point Park, Richmond"),
 ];
 
 const PHOTO_LIBRARY_BY_ID = new Map(PHOTO_LIBRARY.map((photoItem) => [photoItem.id, photoItem]));
