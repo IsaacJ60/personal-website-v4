@@ -119,6 +119,8 @@ export const COLLECTIONS_DATA: Collection[] = [
       "twin-falls-lynn-canyon",
       "stormy-lighthouse",
       "gordie-howe-bridge",
+      "cloud-mountains-at-sea",
+      "garry-point-structure",
     ],
   }),
   createCollection({
@@ -128,7 +130,11 @@ export const COLLECTIONS_DATA: Collection[] = [
     longDescription: "Moments, movement, and figures against light.",
     coverSrc: "/images/camera/Sunset Couple.jpg",
     coverAlt: "Sunset couple",
-    imageIds: ["sunset-couple", "blossom-girl"],
+    imageIds: [
+      "sunset-couple",
+      "blossom-girl",
+      "couple-under-blossoms",
+    ],
   }),
   createCollection({
     slug: "urban-nature",
@@ -153,7 +159,12 @@ export const COLLECTIONS_DATA: Collection[] = [
     longDescription: "Birds, close encounters, and small living details.",
     coverSrc: "/images/camera/Raven Close-up.jpg",
     coverAlt: "Raven close-up",
-    imageIds: ["raven-close-up", "greater-yellowtails"],
+    imageIds: [
+      "raven-close-up",
+      "greater-yellowtails",
+      "stationary-raven",
+      "eagle-pair",
+  ],
   }),
   createCollection({
     slug: "motion-aviation",
@@ -188,6 +199,8 @@ export const COLLECTIONS_DATA: Collection[] = [
       "may-flower-moon",
       "pre-sunset-moon",
       "red-glowing-flowers",
+      "ethereal-umbrellas",
+      "umbrella-branches",
     ],
   }),
 ];
