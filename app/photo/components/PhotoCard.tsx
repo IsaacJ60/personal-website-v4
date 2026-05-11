@@ -2,13 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { PhotoImage } from "../types";
+import type { GalleryTile } from "../types";
 
 type PhotoCardProps = {
-  image: PhotoImage;
+  image: GalleryTile;
+  href?: string;
+  badgeLabel?: string;
 };
 
-export default function PhotoCard({ image }: PhotoCardProps) {
+export default function PhotoCard({ image, href, badgeLabel }: PhotoCardProps) {
   const primaryCategory = image.categories?.[0];
   const objectPosition = image.focusPoint
     ? `${image.focusPoint.x * 100}% ${image.focusPoint.y * 100}%`
@@ -16,18 +18,56 @@ export default function PhotoCard({ image }: PhotoCardProps) {
 
   return (
     <Link
-      href={`/photo/photos/${image.id}`}
+      href={href ?? `/photo/photos/${image.id}`}
       className="group block overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50 shadow-sm transition-transform duration-300 hover:-translate-y-0.5 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-neutral-200 dark:bg-neutral-900">
-        <Image
-          src={image.src}
-          alt={image.alt ?? image.title ?? "Photo"}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          style={objectPosition ? { objectPosition } : undefined}
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-        />
+        {/* if bundle has peekSrcs, render the cover as sliced blinds across the full area */}
+        {image.peekSrcs && image.peekSrcs.length > 0 ? (
+          <div className="absolute inset-0 z-0">
+            <div className="absolute inset-0 flex">
+              {(() => {
+                const sliceCount = Math.min(image.photoCount ?? 4, 4);
+                const sources = [image.src, ...(image.peekSrcs ?? [])].slice(0, sliceCount);
+
+                return sources.map((src, i) => {
+                  const sliceWidth = 100 / sliceCount;
+                  return (
+                    <div
+                      key={`${src}-${i}`}
+                      className="relative h-full overflow-hidden"
+                      style={{ width: `${sliceWidth}%` }}
+                    >
+                      <Image
+                        src={src}
+                        alt={image.alt ?? image.title ?? "Photo"}
+                        fill
+                        className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                        style={objectPosition ? { objectPosition } : undefined}
+                        sizes="(max-width: 640px) 25vw, (max-width: 1024px) 20vw, 10vw"
+                      />
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        ) : (
+          <Image
+            src={image.src}
+            alt={image.alt ?? image.title ?? "Photo"}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105 z-0"
+            style={objectPosition ? { objectPosition } : undefined}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+          />
+        )}
+
+        {badgeLabel ? (
+          <div className="absolute right-3 top-3 rounded-md bg-black/60 px-2 py-1 text-xs font-medium text-white">
+            {badgeLabel}
+          </div>
+        ) : null}
       </div>
 
       <div className="p-4">

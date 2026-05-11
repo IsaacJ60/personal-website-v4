@@ -32,6 +32,27 @@ export type PhotoImage = {
   crop?: PhotoCrop;
 };
 
+export type GalleryTile = PhotoImage & {
+  href: string;
+  badgeLabel?: string;
+  peekSrcs?: string[];
+  photoCount?: number;
+  isBundle?: boolean;
+};
+
+export type Bundle = {
+  id: string;
+  title: string;
+  description?: string;
+  photoIds: string[];
+  coverPhotoId: string;
+  dateTaken?: string;
+  locationName?: string;
+  categories?: string[];
+};
+
+export type GalleryItem = { type: "photo"; id: string } | { type: "bundle"; id: string };
+
 export type PhotoImageInput = string | PhotoImage;
 
 export function normalizePhotoImage(image: PhotoImageInput, index: number): PhotoImage {

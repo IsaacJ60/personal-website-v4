@@ -1,16 +1,57 @@
-import type { PhotoImage } from "../types";
-import { COLLECTIONS_DATA } from "./collections";
+import type { GalleryTile, PhotoImage } from "../types";
+import { COLLECTIONS_DATA, getPhotoById } from "./collections";
+import type { CatalogPhoto } from "./collections";
 
-// Flatten all images from all collections into one comprehensive archive
-export function getAllPhotos(): PhotoImage[] {
-  const allPhotos: PhotoImage[] = [];
+// Flatten all gallery items from all collections into one comprehensive archive
+export function getAllPhotos(): GalleryTile[] {
+  const allPhotos: GalleryTile[] = [];
 
   COLLECTIONS_DATA.forEach((collection) => {
-    allPhotos.push(...collection.images);
+    collection.items.forEach((item) => {
+      if ("photoIds" in item) {
+        const coverPhoto = getPhotoById(item.coverPhotoId);
+        if (!coverPhoto) {
+          return;
+        }
+
+        const peekSrcs = item.photoIds
+          .map((id) => getPhotoById(id))
+          .filter((p): p is CatalogPhoto => !!p && !!p.src)
+          .map((p) => p.src)
+          .slice(1, 5);
+
+        allPhotos.push({
+          ...coverPhoto,
+          id: item.id,
+          title: item.title,
+          alt: item.title,
+          description: item.description,
+          dateTaken: item.dateTaken,
+          locationName: item.locationName,
+          categories: item.categories,
+          href: `/photo/bundles/${item.id}`,
+          badgeLabel: `Bundle • ${item.photoIds.length}`,
+          peekSrcs,
+          photoCount: Math.min(item.photoIds.length, 4),
+          isBundle: true,
+        });
+        return;
+      }
+
+      if (item.id) {
+        allPhotos.push({
+          ...item,
+          href: `/photo/photos/${item.id}`,
+          isBundle: false,
+        });
+      }
+    });
   });
 
-  // Ensure uniqueness by ID
-  const uniquePhotos = Array.from(new Map(allPhotos.map((photo) => [photo.id, photo])).values());
+  // Ensure uniqueness by destination and id so bundles and photos can coexist.
+  const uniquePhotos = Array.from(
+    new Map(allPhotos.map((photo) => [`${photo.href}|${photo.id}`, photo])).values()
+  );
 
   return uniquePhotos;
 }
@@ -57,8 +98,8 @@ export function getUniqueTags(): string[] {
 }
 
 // Filter photos
-export function filterPhotos(
-  photos: PhotoImage[],
+export function filterPhotos<T extends PhotoImage>(
+  photos: T[],
   filters: {
     search?: string;
     locations?: string[];
@@ -66,9 +107,20 @@ export function filterPhotos(
     tags?: string[];
     startDate?: string;
     endDate?: string;
+    bundleMode?: "both" | "bundles" | "photos";
   }
-): PhotoImage[] {
+): T[] {
   return photos.filter((photo) => {
+    const galleryTile = photo as unknown as Partial<GalleryTile>;
+
+    if (filters.bundleMode === "bundles" && galleryTile.isBundle !== true) {
+      return false;
+    }
+
+    if (filters.bundleMode === "photos" && galleryTile.isBundle === true) {
+      return false;
+    }
+
     // Text search in title, alt, description
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();

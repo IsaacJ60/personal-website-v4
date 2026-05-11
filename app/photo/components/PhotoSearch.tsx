@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { normalizePhotoImage, type PhotoImageInput } from "../types";
+import { type GalleryTile } from "../types";
 import { filterPhotos } from "../data/photos";
 import { ChevronDown, X } from "lucide-react";
 import PhotoCard from "./PhotoCard";
 
 type PhotoSearchProps = {
-  allPhotos: PhotoImageInput[];
+  allPhotos: GalleryTile[];
   locations: string[];
   categories: string[];
   tags: string[];
@@ -30,12 +29,20 @@ export default function PhotoSearch({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [bundleMode, setBundleMode] = useState<"both" | "bundles" | "photos">("both");
+  const [layoutMode, setLayoutMode] = useState<"normal" | "compact">("normal");
   const [openDropdown, setOpenDropdown] = useState<"location" | "category" | null>(null);
 
-  const normalizedPhotos = useMemo(
-    () => allPhotos.map((photo, idx) => normalizePhotoImage(photo, idx)),
-    [allPhotos]
-  );
+  const normalizedPhotos = useMemo(() => allPhotos, [allPhotos]);
+  const gridClassName = layoutMode === "compact" 
+    ? "grid gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8"
+    : "grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+  const controlBaseClass =
+    "inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-medium text-neutral-700 shadow-sm transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800";
+  const activeSegmentClass =
+    "bg-neutral-900 text-white dark:bg-white dark:text-neutral-950";
+  const inactiveSegmentClass =
+    "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800";
 
   const filteredPhotos = useMemo(
     () =>
@@ -46,8 +53,9 @@ export default function PhotoSearch({
         tags: selectedTags.length > 0 ? selectedTags : undefined,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
+        bundleMode,
       }),
-    [normalizedPhotos, search, selectedLocations, selectedCategories, selectedTags, startDate, endDate]
+    [normalizedPhotos, search, selectedLocations, selectedCategories, selectedTags, startDate, endDate, bundleMode]
   );
 
   const hasActiveFilters =
@@ -115,16 +123,49 @@ export default function PhotoSearch({
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950 sm:flex-row sm:flex-wrap sm:items-center">
+        {/* Layout Toggle */}
+        <div className="inline-flex h-9 w-full items-stretch rounded-md border border-neutral-300 bg-white p-1 text-xs font-medium shadow-sm dark:border-neutral-700 dark:bg-neutral-900 sm:w-auto">
+          {(["normal", "compact"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setLayoutMode(mode)}
+              className={`flex-1 rounded px-3 transition-colors sm:flex-none ${
+                layoutMode === mode
+                  ? activeSegmentClass
+                  : inactiveSegmentClass
+              }`}
+            >
+              {mode === "normal" ? "Normal" : "Compact"}
+            </button>
+          ))}
+        </div>
+
+        <div className="inline-flex h-9 w-full items-stretch rounded-md border border-neutral-300 bg-white p-1 text-xs font-medium shadow-sm dark:border-neutral-700 dark:bg-neutral-900 sm:w-auto">
+          {(["both", "photos", "bundles"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setBundleMode(mode)}
+              className={`flex-1 rounded px-3 transition-colors sm:flex-none ${
+                bundleMode === mode
+                  ? activeSegmentClass
+                  : inactiveSegmentClass
+              }`}
+            >
+              {mode === "both" ? "Both" : mode === "photos" ? "Photos" : "Bundles"}
+            </button>
+          ))}
+        </div>
+
         {/* Location Dropdown */}
-        <div ref={locationDropdownRef} className="relative">
+        <div ref={locationDropdownRef} className="relative w-full sm:w-auto">
           <button
             onClick={() =>
               setOpenDropdown(openDropdown === "location" ? null : "location")
             }
-            className="flex items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            className={`${controlBaseClass} w-full justify-between sm:w-auto`}
           >
-            Location {selectedLocations.length > 0 && <span className="font-semibold">({selectedLocations.length})</span>}
+            Location&nbsp; {selectedLocations.length > 0 && <span className="font-semibold">({selectedLocations.length})</span>}
             <ChevronDown size={14} />
           </button>
           {openDropdown === "location" && (
@@ -166,14 +207,14 @@ export default function PhotoSearch({
         </div>
 
         {/* Category Dropdown */}
-        <div ref={categoryDropdownRef} className="relative">
+        <div ref={categoryDropdownRef} className="relative w-full sm:w-auto">
           <button
             onClick={() =>
               setOpenDropdown(openDropdown === "category" ? null : "category")
             }
-            className="flex items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 py-2 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            className={`${controlBaseClass} w-full justify-between sm:w-auto`}
           >
-            Category {selectedCategories.length > 0 && <span className="font-semibold">({selectedCategories.length})</span>}
+            Category&nbsp; {selectedCategories.length > 0 && <span className="font-semibold">({selectedCategories.length})</span>}
             <ChevronDown size={14} />
           </button>
           {openDropdown === "category" && (
@@ -215,12 +256,12 @@ export default function PhotoSearch({
         </div>
 
         {/* Date Range */}
-        <div className="flex items-center gap-1">
+        <div className="inline-flex h-9 w-full items-center gap-1 rounded-md border border-neutral-300 bg-white px-2 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 sm:w-auto">
           <input
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+            className="h-7 min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 text-sm text-neutral-700 outline-none dark:text-neutral-100"
             title="Start date"
           />
           <span className="text-sm text-muted-foreground">—</span>
@@ -228,16 +269,17 @@ export default function PhotoSearch({
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="rounded border border-neutral-300 bg-white px-2 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+            className="h-7 min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 text-sm text-neutral-700 outline-none dark:text-neutral-100"
             title="End date"
           />
         </div>
+
 
         {/* Reset Button */}
         {hasActiveFilters && (
           <button
             onClick={resetFilters}
-            className="ml-auto flex items-center gap-1 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm font-medium leading-5 text-neutral-600 transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            className={`${controlBaseClass} w-full justify-center gap-1 text-neutral-600 dark:text-neutral-400 sm:w-auto`}
           >
             <X size={14} />
             Clear filters
@@ -247,14 +289,14 @@ export default function PhotoSearch({
 
       {/* Results count */}
       <div className="text-sm text-muted-foreground">
-        {filteredPhotos.length} of {normalizedPhotos.length} photos
+        {filteredPhotos.length} of {normalizedPhotos.length} items
       </div>
 
       {/* Photo Grid */}
       {filteredPhotos.length > 0 ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className={gridClassName}>
           {filteredPhotos.map((photo) => (
-            <PhotoCard key={photo.id} image={photo} />
+            <PhotoCard key={photo.href} image={photo} href={photo.href} badgeLabel={photo.badgeLabel} />
           ))}
         </div>
       ) : (

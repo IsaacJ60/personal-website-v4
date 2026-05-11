@@ -1,20 +1,33 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 type BackToPhotosButtonProps = {
   className?: string;
+  href?: string;
+  label?: string;
 };
 
 export default function BackToPhotosButton({
-  className = "inline-block rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium leading-5 text-neutral-800 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:bg-neutral-900",
+  className,
+  href = "/photo/gallery",
+  label = "Back to Photos",
 }: BackToPhotosButtonProps) {
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push(href);
+  };
+
   return (
-    <Link
-      href="/photo"
-      className={className}
-    >
-      Back to Photos
-    </Link>
+    <Button type="button" variant="outline" size="default" className={className} onClick={handleBack}>
+      {label}
+    </Button>
   );
 }

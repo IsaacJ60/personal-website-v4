@@ -1,4 +1,6 @@
-import type { PhotoImage } from "../types";
+import type { PhotoImage, Bundle, GalleryItem } from "../types";
+
+export type CollectionItemResult = CatalogPhoto | (Bundle & { coverPhoto: PhotoImage });
 
 export type Collection = {
   slug: string;
@@ -8,14 +10,16 @@ export type Collection = {
   count: string;
   coverSrc: string;
   coverAlt: string;
+  items: CollectionItemResult[];
   images: PhotoImage[];
 };
 
-type CollectionInput = Omit<Collection, "count" | "images"> & {
-  imageIds: string[];
+type CollectionInput = Omit<Collection, "count" | "items" | "images"> & {
+  itemIds?: (string | GalleryItem)[];
+  imageIds?: string[];
 };
 
-type CatalogPhoto = PhotoImage & { id: string };
+export type CatalogPhoto = PhotoImage & { id: string };
 
 function photo(
   id: string,
@@ -79,9 +83,151 @@ const PHOTO_LIBRARY: CatalogPhoto[] = [
   photo("stationary-raven", "/images/camera/Stationary Raven.jpg", "Stationary Raven", "2026-03-21", ["Wildlife"], "Stationary raven", "A raven standing on a cliff.", "Tunnel Bluffs, BC"),
   photo("eagle-pair", "/images/camera/Eagle Pair.jpg", "Eagle Pair", "2026-03-27", ["Wildlife"], "Eagle pair", "Two eagles pictured together.", "West Dyke Trail, Richmond"),
   photo("couple-under-blossoms", "/images/camera/Couple Under Blossoms.jpg", "Couple Under Blossoms", "2026-03-27", ["Portraits"], "Couple under blossoms", "A couple standing under cherry blossoms.", "Garry Point Park, Richmond"),
+  photo("resting-bunny", "/images/camera/2026-05-10/Resting Bunny.jpg", "Resting Bunny", "2026-05-10", ["Wildlife"], "Resting bunny", "A bunny resting in a peaceful setting.", "Terra Nova, Richmond"),
+  photo("bunny-pair", "/images/camera/2026-05-10/Bunny Pair.jpg", "Bunny Pair", "2026-05-10", ["Wildlife"], "Bunny pair", "Two bunnies resting in a peaceful setting.", "Terra Nova, Richmond"),
+  photo("sneaky-bunny", "/images/camera/2026-05-10/Sneaky Bunny.jpg", "Sneaky Bunny", "2026-05-10", ["Wildlife"], "Sneaky bunny", "A bunny peeking out from a peaceful setting.", "Terra Nova, Richmond"),
+  photo("grazing-bunny", "/images/camera/2026-05-10/Grazing Bunny.jpg", "Grazing Bunny", "2026-05-10", ["Wildlife"], "Grazing bunny", "A bunny grazing in a peaceful setting.", "Terra Nova, Richmond"),
+  photo("chewing-bunny", "/images/camera/2026-05-10/Chewing Bunny.jpg", "Chewing Bunny", "2026-05-10", ["Wildlife"], "Chewing bunny", "A bunny chewing on vegetation in a peaceful setting.", "Terra Nova, Richmond"),
+  photo("surprised-bunny", "/images/camera/2026-05-10/Surprised Bunny.jpg", "Surprised Bunny", "2026-05-10", ["Wildlife"], "Surprised bunny", "A bunny surprised in a peaceful setting.", "Terra Nova, Richmond"),
+  photo("bunny-eye", "/images/camera/2026-05-10/Bunny Eye.jpg", "Bunny Eye", "2026-05-10", ["Wildlife"], "Bunny eye", "A close-up of a bunny's eye in a peaceful setting.", "Terra Nova, Richmond"),
+  photo("praying-bunny", "/images/camera/2026-05-10/Praying Bunny.jpg", "Praying Bunny", "2026-05-10", ["Wildlife"], "Praying bunny", "A bunny in a praying position in a peaceful setting.", "Terra Nova, Richmond"),
+  photo("radial-flower-wipe", "/images/camera/2026-05-10/Radial Flower Wipe.jpg", "Radial Flower Wipe", "2026-05-10", ["Abstract & Detail"], "Radial flower wipe", "A radial pattern of flowers in a peaceful setting.", "Terra Nova, Richmond"),
+  photo("air-canada-departure", "/images/camera/2026-05-10/Air Canada Departure.jpg", "Air Canada Departure", "2026-05-10", ["Motion & Aviation"], "Air Canada departure", "An aircraft departing from an airport.", "Terra Nova, Richmond"),
+  photo("dark-ladybug-crawl", "/images/camera/2026-05-10/Dark Ladybug Crawl.jpg", "Dark Ladybug Crawl", "2026-05-10", ["Wildlife"], "Dark ladybug crawl", "A ladybug crawling on a dark leaf.", "Terra Nova, Richmond"),
+  photo("ladybug-crawl", "/images/camera/2026-05-10/Ladybug Crawl.jpg", "Ladybug Crawl", "2026-05-10", ["Wildlife"], "Ladybug crawl", "A ladybug crawling on a leaf.", "Terra Nova, Richmond"),
+  photo("cornfield-chase", "/images/camera/2026-05-10/Cornfield Chase.jpg", "Cornfield Chase", "2026-05-10", ["Abstract & Detail"], "Cornfield chase", "Yellow flowers in a radial wipe.", "Terra Nova, Richmond"),
+  photo("flower-field-side-wipe", "/images/camera/2026-05-10/Flower Field Side Wipe.jpg", "Flower Field Side Wipe", "2026-05-10", ["Abstract & Detail"], "Flower field side wipe", "A side wipe of flowers in a peaceful setting.", "Terra Nova, Richmond"),
+  photo("flower-field-swirl", "/images/camera/2026-05-10/Flower Field Swirl.jpg", "Flower Field Swirl", "2026-05-10", ["Abstract & Detail"], "Flower field swirl", "A swirling pattern of flowers in a peaceful setting.", "Terra Nova, Richmond"),
+  photo("flower-field", "/images/camera/2026-05-10/Flower Field.jpg", "Flower Field", "2026-05-10", ["Abstract & Detail"], "Flower field", "A field of flowers in a peaceful setting.", "Terra Nova, Richmond"),
+  photo("painted-lady-butterfly-liftoff", "/images/camera/2026-05-10/Painted Lady Butterfly Liftoff.jpg", "Painted Lady Butterfly Liftoff", "2026-05-10", ["Wildlife"], "Painted lady butterfly liftoff", "A painted lady butterfly taking off from a flower.", "Terra Nova, Richmond"),
+  photo("painted-lady-butterfly", "/images/camera/2026-05-10/Painted Lady Butterfly.jpg", "Painted Lady Butterfly", "2026-05-10", ["Wildlife"], "Painted lady butterfly", "A painted lady butterfly resting on a flower.", "Terra Nova, Richmond"),
+  photo("stationary-flowers", "/images/camera/2026-05-10/Stationary Flowers.jpg", "Stationary Flowers", "2026-05-10", ["Abstract & Detail"], "Stationary flowers", "A collection of stationary flowers in a peaceful setting.", "Terra Nova, Richmond"),
 ];
 
 const PHOTO_LIBRARY_BY_ID = new Map(PHOTO_LIBRARY.map((photoItem) => [photoItem.id, photoItem]));
+
+// Bundle system: collections of related photos grouped under one cover photo
+export const PHOTO_BUNDLES: Bundle[] = [
+  {
+    id: "cherry-blossom-aerial",
+    title: "Cherry Blossom Aerial",
+    description: "A collection of aircraft captured mid-flight through spring cherry blossoms.",
+    photoIds: ["cherry-blossom-plane", "cherry-blossom-plane-2", "cherry-blossom-private-jet"],
+    coverPhotoId: "cherry-blossom-plane",
+    categories: ["Motion & Aviation"],
+    dateTaken: "2026-04-07",
+    locationName: "Larry Berg Flight Path Park, Richmond",
+  },
+  {
+    id: "umbrellas-study",
+    title: "Umbrellas Study",
+    description: "An exploration of umbrellas in various contexts and compositions.",
+    photoIds: ["double-umbrellas", "ethereal-umbrellas", "umbrella-branches"],
+    coverPhotoId: "double-umbrellas",
+    categories: ["Abstract & Detail"],
+    dateTaken: "2026-03-05",
+    locationName: "Yaletown, Vancouver",
+  },
+  {
+    id: "golden-hour-skyline",
+    title: "Golden Hour Skyline",
+    description: "A collection of skyline studies captured at different times of day, exploring the interplay of light and urban landscape.",
+    photoIds: ["golden-hour-skyline", "blue-hour-skyline", "night-skyline", "cyberpunk-skyline"],
+    coverPhotoId: "golden-hour-skyline",
+    categories: ["Urban Nature"],
+    dateTaken: "2026-05-02",
+    locationName: "The Shipyards, North Vancouver",
+  },
+  {
+    id: "blossom-portraits",
+    title: "Blossom Portraits",
+    description: "Portrait studies framed within the delicate bloom of cherry blossoms, capturing human moments amid spring.",
+    photoIds: ["blossom-girl", "couple-under-blossoms"],
+    coverPhotoId: "blossom-girl",
+    categories: ["People & Portraits"],
+    dateTaken: "2026-03-27",
+    locationName: "Garry Point Park, Richmond",
+  },
+  {
+    id: "raven-study",
+    title: "Raven Study",
+    description: "Close studies of ravens, exploring character and detail in urban wildlife.",
+    photoIds: ["raven-close-up", "stationary-raven"],
+    coverPhotoId: "raven-close-up",
+    categories: ["Wildlife"],
+    dateTaken: "2026-03-21",
+    locationName: "Tunnel Bluffs, BC",
+  },
+  {
+    id: "moon-studies",
+    title: "Moon Studies",
+    description: "Explorations of the moon in various atmospheric conditions and contexts.",
+    photoIds: ["may-flower-moon", "pre-sunset-moon"],
+    coverPhotoId: "may-flower-moon",
+    categories: ["Abstract & Detail"],
+    dateTaken: "2026-04-29",
+    locationName: "Richmond, BC",
+  },
+  {
+    id: "bunnies",
+    title: "Bunnies",
+    description: "A collection of bunny photos captured in a peaceful setting, showcasing various poses and moments.",
+    photoIds: ["resting-bunny", "bunny-pair", "sneaky-bunny", "grazing-bunny", "chewing-bunny", "surprised-bunny", "bunny-eye", "praying-bunny"],
+    coverPhotoId: "resting-bunny",
+    categories: ["Wildlife"],
+    dateTaken: "2026-05-10",
+    locationName: "Terra Nova, Richmond",
+  },
+  {
+    id: "flower-field",
+    title: "Flower Field",
+    description: "A collection of photos capturing a flower field in various compositions and moments.",
+    photoIds: ["radial-flower-wipe", "cornfield-chase", "flower-field-side-wipe", "flower-field-swirl", "flower-field"],
+    coverPhotoId: "radial-flower-wipe",
+    categories: ["Abstract & Detail"],
+    dateTaken: "2026-05-10",
+    locationName: "Terra Nova, Richmond",
+  },
+  {
+    id: "ladybug",
+    title: "Ladybug",
+    description: "Close-up studies of a ladybug in various moments and compositions.",
+    photoIds: ["dark-ladybug-crawl", "ladybug-crawl"],
+    coverPhotoId: "dark-ladybug-crawl",
+    categories: ["Wildlife"],
+    dateTaken: "2026-05-10",
+    locationName: "Terra Nova, Richmond",
+  },
+  {
+    id: "painted-lady-butterfly",
+    title: "Painted Lady Butterfly",
+    description: "A collection of photos capturing a painted lady butterfly in various moments and compositions.",
+    photoIds: ["painted-lady-butterfly-liftoff", "painted-lady-butterfly"],
+    coverPhotoId: "painted-lady-butterfly-liftoff",
+    categories: ["Wildlife"],
+    dateTaken: "2026-05-10",
+    locationName: "Terra Nova, Richmond",
+  }
+];
+
+const PHOTO_BUNDLES_BY_ID = new Map(PHOTO_BUNDLES.map((bundle) => [bundle.id, bundle]));
+
+export function getBundleById(id: string): Bundle | undefined {
+  return PHOTO_BUNDLES_BY_ID.get(id);
+}
+
+export function getAllBundleIds(): string[] {
+  return PHOTO_BUNDLES.map((bundle) => bundle.id);
+}
+
+export function getBundlePhotos(bundleId: string): CatalogPhoto[] {
+  const bundle = getBundleById(bundleId);
+  if (!bundle) return [];
+
+  return bundle.photoIds
+    .map((id) => getPhotoById(id))
+    .filter((photo): photo is CatalogPhoto => photo !== undefined);
+}
 
 function pickPhotos(imageIds: string[]): PhotoImage[] {
   return imageIds.map((id) => {
@@ -95,11 +241,57 @@ function pickPhotos(imageIds: string[]): PhotoImage[] {
   });
 }
 
-function createCollection({ imageIds, ...collection }: CollectionInput): Collection {
+function pickCollectionPhotos(itemIds: (string | GalleryItem)[]): PhotoImage[] {
+  return itemIds.flatMap((item) => {
+    const id = typeof item === "string" ? item : item.id;
+    const type = typeof item === "string" ? "photo" : item.type;
+
+    if (type === "bundle") {
+      return getBundlePhotos(id);
+    }
+
+    const photoItem = PHOTO_LIBRARY_BY_ID.get(id);
+    if (!photoItem) {
+      throw new Error(`Unknown photo id: ${id}`);
+    }
+    return [photoItem];
+  });
+}
+
+function pickCollectionItems(itemIds: (string | GalleryItem)[]): CollectionItemResult[] {
+  return itemIds.map((item) => {
+    const id = typeof item === "string" ? item : item.id;
+    const type = typeof item === "string" ? "photo" : item.type;
+
+    if (type === "bundle") {
+      const bundle = PHOTO_BUNDLES_BY_ID.get(id);
+      if (!bundle) {
+        throw new Error(`Unknown bundle id: ${id}`);
+      }
+      const coverPhoto = PHOTO_LIBRARY_BY_ID.get(bundle.coverPhotoId);
+      if (!coverPhoto) {
+        throw new Error(`Unknown cover photo id for bundle ${id}: ${bundle.coverPhotoId}`);
+      }
+      return { ...bundle, coverPhoto };
+    }
+
+    // Default to photo
+    const photoItem = PHOTO_LIBRARY_BY_ID.get(id);
+    if (!photoItem) {
+      throw new Error(`Unknown photo id: ${id}`);
+    }
+    return photoItem;
+  });
+}
+
+function createCollection({ itemIds, imageIds, ...collection }: CollectionInput): Collection {
+  const ids = itemIds || imageIds || [];
+
   return {
     ...collection,
-    count: String(imageIds.length),
-    images: pickPhotos(imageIds),
+    count: String(ids.length),
+    items: pickCollectionItems(ids),
+    images: pickCollectionPhotos(ids),
   };
 }
 
@@ -130,10 +322,9 @@ export const COLLECTIONS_DATA: Collection[] = [
     longDescription: "Moments, movement, and figures against light.",
     coverSrc: "/images/camera/Sunset Couple.jpg",
     coverAlt: "Sunset couple",
-    imageIds: [
+    itemIds: [
       "sunset-couple",
-      "blossom-girl",
-      "couple-under-blossoms",
+      { type: "bundle", id: "blossom-portraits" },
     ],
   }),
   createCollection({
@@ -143,11 +334,8 @@ export const COLLECTIONS_DATA: Collection[] = [
     longDescription: "City edges, blossoms, reflections, and atmosphere.",
     coverSrc: "/images/camera/Cherry Buildings.jpg",
     coverAlt: "Cherry buildings",
-    imageIds: [
-        "golden-hour-skyline",
-      "blue-hour-skyline",
-      "night-skyline",
-      "cyberpunk-skyline",
+    itemIds: [
+      { type: "bundle", id: "golden-hour-skyline" },
       "cherry-buildings",
       "mountain-vancouver",
     ],
@@ -159,12 +347,14 @@ export const COLLECTIONS_DATA: Collection[] = [
     longDescription: "Birds, close encounters, and small living details.",
     coverSrc: "/images/camera/Raven Close-up.jpg",
     coverAlt: "Raven close-up",
-    imageIds: [
-      "raven-close-up",
+    itemIds: [
+      { type: "bundle", id: "raven-study" },
+      { type: "bundle", id: "bunnies" },
+      { type: "bundle", id: "ladybug" },
+      { type: "bundle", id: "painted-lady-butterfly" },
       "greater-yellowtails",
-      "stationary-raven",
       "eagle-pair",
-  ],
+    ],
   }),
   createCollection({
     slug: "motion-aviation",
@@ -173,11 +363,9 @@ export const COLLECTIONS_DATA: Collection[] = [
     longDescription: "Planes, parachutes, and things moving through space.",
     coverSrc: "/images/camera/Flying Canopy.jpg",
     coverAlt: "Flying canopy",
-    imageIds: [
+    itemIds: [
       "flying-canopy",
-      "cherry-blossom-plane",
-      "cherry-blossom-plane-2",
-      "cherry-blossom-private-jet",
+      { type: "bundle", id: "cherry-blossom-aerial" },
       "cruising-airliner",
       "fuel-trails",
       "monochrome-air-canada",
@@ -191,16 +379,14 @@ export const COLLECTIONS_DATA: Collection[] = [
     longDescription: "Textures, moon shots, and fragments of a scene.",
     coverSrc: "/images/camera/Moon and Blossom.jpg",
     coverAlt: "Moon and blossoms",
-    imageIds: [
+    itemIds: [
       "stanley-park-silhouette",
-      "double-umbrellas",
-      "moon-and-blossom",
+      { type: "bundle", id: "umbrellas-study" },
       "double-yellow-chairs",
-      "may-flower-moon",
-      "pre-sunset-moon",
+      { type: "bundle", id: "moon-studies" },
+      { type: "bundle", id: "flower-field" },
       "red-glowing-flowers",
-      "ethereal-umbrellas",
-      "umbrella-branches",
+      "moon-and-blossom",
     ],
   }),
 ];
@@ -220,3 +406,6 @@ export function getPhotoById(id: string): CatalogPhoto | undefined {
 export function getAllPhotoIds(): string[] {
   return PHOTO_LIBRARY.map((photo) => photo.id);
 }
+
+
+

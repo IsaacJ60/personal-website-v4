@@ -1,22 +1,20 @@
 import type { ReactNode } from "react";
-import { normalizePhotoImage, type PhotoImageInput } from "../types";
+import type { GalleryTile } from "../types";
 import PhotoCard from "./PhotoCard";
 
 type PhotoGalleryPageProps = {
   title: string;
   description?: string;
-  images: PhotoImageInput[];
+  items: GalleryTile[];
   action?: ReactNode;
 };
 
 export default function PhotoGalleryPage({
   title,
   description,
-  images,
+  items,
   action,
 }: PhotoGalleryPageProps) {
-  const normalizedImages = images.map((image, index) => normalizePhotoImage(image, index));
-
   return (
     <section className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -30,9 +28,9 @@ export default function PhotoGalleryPage({
       </header>
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-        {normalizedImages.map((image) => (
-          <PhotoCard key={image.id} image={image} />
-        ))}
+        {items.map((item) => {
+          return <PhotoCard key={`${item.href}-${item.id}`} image={item} href={item.href} badgeLabel={item.badgeLabel} />;
+        })}
       </div>
     </section>
   );

@@ -31,7 +31,7 @@ export default function PhotoSearchPage() {
           </p>
         </div>
 
-        <BackToPhotosButton />
+        <BackToPhotosButton href="/photo" label="Back to Photo Home" />
       </header>
 
       <PhotoSearch
