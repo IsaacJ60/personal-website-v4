@@ -22,7 +22,7 @@ export default function PhotoSearchPage() {
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-12 space-y-8">
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="max-w-3xl space-y-3">
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Gallery</p>
           <h1 className="text-3xl font-bold">Search all photos</h1>
@@ -31,7 +31,9 @@ export default function PhotoSearchPage() {
           </p>
         </div>
 
-        <BackToPhotosButton href="/photo" label="Back to Photo Home" />
+        <div className="self-center">
+          <BackToPhotosButton href="/photo" label="Photo Home" />
+        </div>
       </header>
 
       <PhotoSearch

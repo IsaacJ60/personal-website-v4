@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { PhotoImage } from "../types";
 
 type FeaturedCarouselProps = {
-  photos: (PhotoImage & { id: string })[];
+  photos: (PhotoImage & { id: string; href?: string })[];
 };
 
 export default function FeaturedCarousel({ photos }: FeaturedCarouselProps) {
@@ -50,21 +50,21 @@ export default function FeaturedCarousel({ photos }: FeaturedCarouselProps) {
   }, [emblaApi, onSelect]);
 
   return (
-    <section className="mb-8">
-      <h2 className="mb-6 text-center text-2xl font-semibold tracking-tight">Featured Work</h2>
+    <section className="mb-4">
+      <h2 className="mb-4 text-center text-2xl font-semibold tracking-tight">Recent Work</h2>
 
-      <div className="relative group mb-4">
+      <div className="relative group mb-6">
         <div
           ref={emblaRef}
           className="overflow-hidden rounded-lg"
         >
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             {photos.map((image) => (
               <Link
-                key={image.id}
-                href={`/photo/photos/${image.id}`}
-                className="relative flex-shrink-0 w-1/3 aspect-[4/3] select-none overflow-hidden rounded-md group/image"
-              >
+                  key={image.id}
+                  href={image.href ?? `/photo/photos/${image.id}`}
+                  className="relative flex-shrink-0 w-1/3 aspect-[4/3] select-none overflow-hidden rounded-md group/image"
+                >
                 <Image
                   src={image.src}
                   alt={image.alt || image.title || "Photo"}

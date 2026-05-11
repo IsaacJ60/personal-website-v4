@@ -31,19 +31,24 @@ export default async function BundleDetailPage({ params }: BundleDetailPageProps
   const photos = getBundlePhotos(id);
 
   return (
-    <main className="min-h-screen bg-white dark:bg-neutral-950 py-8 px-4">
-      <div className="max-w-5xl mx-auto">
+    <main className="mx-auto max-w-6xl px-4 py-12 space-y-8">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8 flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <BackToPhotosButton className="mb-4" />
-            <h1 className="text-4xl font-bold tracking-tight mb-2">{bundle.title}</h1>
-            {bundle.description && (
-              <p className="text-lg text-muted-foreground max-w-2xl">{bundle.description}</p>
-            )}
-          </div>
-          <div className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-            {photos.length} photo{photos.length !== 1 ? "s" : ""}
+        <div className="mb-8 space-y-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Bundle</p>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="max-w-3xl space-y-2">
+              <h2 className="text-3xl font-semibold tracking-tight">{bundle.title}</h2>
+              {bundle.description ? (
+                <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{bundle.description}</p>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-4 self-start pt-1">
+              <div className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                {photos.length} photo{photos.length !== 1 ? "s" : ""}
+              </div>
+              <BackToPhotosButton href="/photo" label="Photo Home" />
+            </div>
           </div>
         </div>
 

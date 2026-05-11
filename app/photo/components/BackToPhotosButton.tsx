@@ -11,22 +11,17 @@ type BackToPhotosButtonProps = {
 
 export default function BackToPhotosButton({
   className,
-  href = "/photo/gallery",
-  label = "Back to Photos",
+  href = "/photo",
+  label = "Photo Home",
 }: BackToPhotosButtonProps) {
   const router = useRouter();
 
-  const handleBack = () => {
-    if (window.history.length > 1) {
-      router.back();
-      return;
-    }
-
+  const handleGoHome = () => {
     router.push(href);
   };
 
   return (
-    <Button type="button" variant="outline" size="default" className={className} onClick={handleBack}>
+    <Button type="button" variant="outline" size="default" className={className} onClick={handleGoHome}>
       {label}
     </Button>
   );

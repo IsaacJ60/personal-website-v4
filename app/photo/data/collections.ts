@@ -51,6 +51,7 @@ const PHOTO_LIBRARY: CatalogPhoto[] = [
   photo("sunset-couple", "/images/camera/Sunset Couple.jpg", "Sunset Couple", "2026-03-27", ["People & Portraits"], "Sunset couple", "A silhouetted couple framed against the warm glow of a setting sun.", "Garry Point Park, Richmond"),
   photo("blossom-girl", "/images/camera/Blossom Girl.jpg", "Blossom Girl", "2026-03-27", ["People & Portraits"], "Blossom girl", "Portrait of a figure amid spring blossoms, blending human presence with natural surroundings.", "Garry Point Park, Richmond"),
   photo("cherry-buildings", "/images/camera/Cherry Buildings.jpg", "Cherry Buildings", "2026-03-28", ["Urban Nature"], "Cherry buildings", "Urban architecture framed through cherry blossom branches, bridging natural and built environments.", "Graveley St, Vancouver"),
+  photo("cherry-blossom-sunrise", "/images/camera/Cherry Blossom Sunrise.jpg", "Cherry Blossom Sunrise", "2026-03-28", ["Urban Nature"], "Cherry blossom sunrise", "A sunrise scene framed by cherry blossoms, capturing the ephemeral beauty of dawn and spring.", "Graveley St, Vancouver"),
   photo("blue-hour-skyline", "/images/camera/Blue Hour Skyline.jpg", "Blue Hour Skyline", "2026-05-02", ["Urban Nature"], "Blue hour skyline", "A city skyline captured during the blue hour, where artificial and natural light converge.", "The Shipyards, North Vancouver"),
   photo("cherry-blossom-plane", "/images/camera/Cherry Blossom Plane.jpg", "Cherry Blossom Plane", "2026-04-07", ["Motion & Aviation"], "Cherry blossom plane", "An aircraft passing overhead amid spring cherry blossoms, merging sky and season.", "Larry Berg Flight Path Park, Richmond"),
   photo("cherry-blossom-plane-2", "/images/camera/Cherry Blossom Plane 2.jpg", "Cherry Blossom Plane 2", "2026-04-06", ["Motion & Aviation"], "Cherry blossom plane", "A second perspective of aircraft and blossoms in compositional dialogue.", "Larry Berg Flight Path Park, Richmond"),
@@ -117,6 +118,16 @@ export const PHOTO_BUNDLES: Bundle[] = [
     categories: ["Motion & Aviation"],
     dateTaken: "2026-04-07",
     locationName: "Larry Berg Flight Path Park, Richmond",
+  },
+  {
+    id: "cherry-blossom-buildings",
+    title: "Cherry Blossom Buildings",
+    description: "Urban architecture framed through cherry blossom branches, bridging natural and built environments.",
+    photoIds: ["cherry-buildings", "cherry-blossom-sunrise"],
+    coverPhotoId: "cherry-buildings",
+    categories: ["Urban Nature"],
+    dateTaken: "2026-03-28",
+    locationName: "Graveley St, Vancouver",
   },
   {
     id: "umbrellas-study",
@@ -336,7 +347,7 @@ export const COLLECTIONS_DATA: Collection[] = [
     coverAlt: "Cherry buildings",
     itemIds: [
       { type: "bundle", id: "golden-hour-skyline" },
-      "cherry-buildings",
+      { type: "bundle", id: "cherry-blossom-buildings" },
       "mountain-vancouver",
     ],
   }),

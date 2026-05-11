@@ -1,47 +1,56 @@
-import Link from "next/link";
 import FeaturedCarousel from "./components/FeaturedCarousel";
 import CollectionsSection from "./components/CollectionsSection";
-import { getPhotoById } from "./data/collections";
+import BackToPhotosButton from "./components/BackToPhotosButton";
+import { getAllPhotos } from "./data/photos";
+import PhotosByDate from "./components/PhotosByDate";
 
 export const metadata = {
   title: "Photo Viewer",
 };
 
 export default function Page() {
-  // Get featured photos
-  const featuredPhotoIds = [
-    "raven-close-up",
-    "sunset-couple",
-    "blossom-girl",
-    "moon-and-blossom",
-    "fuel-trails",
-    "greater-yellowtails",
-    "twin-falls-lynn-canyon",
-    "mountain-vancouver",
-  ];
+  // Recent work — pick latest 5 items (include bundle covers and photos) by dateTaken
+  const recentPhotos = getAllPhotos()
+    .filter((p) => !!p.dateTaken)
+    .sort((a, b) => (b.dateTaken! > a.dateTaken! ? 1 : b.dateTaken! < a.dateTaken! ? -1 : 0))
+    .slice(0, 5);
+  // Ensure each item has an `id` string (FeaturedCarousel expects it)
+  const recentPhotosWithId = recentPhotos.map((p) => ({ ...p, id: p.id ?? p.src }));
 
-  const featuredPhotos = featuredPhotoIds
-    .map((id) => getPhotoById(id))
-    .filter((photo) => photo !== undefined);
+  // Build date -> photos map for calendar component
+  const allPhotos = getAllPhotos();
+  const dateMap: Record<string, { id: string; src: string; alt?: string; href?: string }[]> = {};
+  allPhotos.forEach((p) => {
+    if (!p.dateTaken) return;
+    const key = p.dateTaken;
+    const entry = { id: p.id ?? p.src, src: p.src, alt: p.alt ?? p.title, href: p.href ?? `/photo/photos/${p.id ?? p.src}` };
+    if (!dateMap[key]) dateMap[key] = [];
+    dateMap[key].push(entry);
+  });
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-12">
-      <header className="pb-6 border-neutral-200 dark:border-neutral-800 relative pr-28 sm:pr-32">
+      <header className="flex items-center justify-between pb-6 border-neutral-200 dark:border-neutral-800">
         <div className="max-w-3xl">
           <h1 className="text-3xl font-bold">IJ.PRIME</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">Explore my photographs and discover the stories behind each image. Find me on instagram: @<u><a href="https://instagram.com/ij.prime" target="_blank" rel="noopener noreferrer">ij.prime</a></u></p>
         </div>
 
-        <Link href="/" className="absolute right-0 top-0 inline-block rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:bg-neutral-900">Home</Link>
+        <div className="ml-4">
+          <BackToPhotosButton href="/" label="Home" />
+        </div>
       </header>
 
       <section className="space-y-4 mt-6">
-        <div className="px-6 pt-6 pb-3 rounded-xl bg-neutral-50 dark:bg-neutral-900">
-          <div className="max-w-4xl mx-auto">
-            <FeaturedCarousel photos={featuredPhotos} />
+        <div className="px-6 pt-4 pb-2 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xl">
+          <div className="max-w-5xl mx-auto">
+            <FeaturedCarousel photos={recentPhotosWithId} />
           </div>
         </div>
         <CollectionsSection />
+        <div className="pb-6">
+          <PhotosByDate dateMap={dateMap} />
+        </div>
       </section>
     </main>
   );

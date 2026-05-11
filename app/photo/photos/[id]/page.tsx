@@ -37,7 +37,7 @@ export default async function PhotoDetailPage({ params }: PhotoDetailPageProps) 
     <main className="min-h-screen bg-white dark:bg-neutral-950 py-6 px-4 mt-6">
       <div className="max-w-5xl mx-auto">
         <div className="mb-5 flex items-center gap-3">
-          <h1 className="min-w-0 flex-1 truncate text-2xl font-bold tracking-tight">
+          <h1 className="min-w-0 flex-1 truncate text-3xl font-bold tracking-tight">
             {photo.title}
           </h1>
 
