@@ -4,7 +4,7 @@ import ProjectPreview from "./components/ProjectPreview";
 import ExperiencePreview, { ExperienceTimeline } from "./components/ExperiencePreview";
 import { ThemeSwitch } from "./components/ThemeSwitch";
 import { YoutubeHighlight } from "./components/YoutubeVideo";
-import { FaLinkedin, FaGithub, FaYoutube, FaFileAlt } from "react-icons/fa";
+import { FaLinkedin, FaGithub, FaYoutube, FaFileAlt, FaInstagram } from "react-icons/fa";
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator"
 import { FullProjectGrid } from "./components/ProjectPreview";
@@ -21,6 +21,7 @@ const SOCIAL_LINKS = {
   linkedin: "https://www.linkedin.com/in/isaac6/",
   github: "https://github.com/IsaacJ60",
   youtube: "https://www.youtube.com/@eyesackle",
+  instagram: "https://www.instagram.com/eyesackle/",
   resume: "https://drive.google.com/file/d/1v5q1la3g808hRPcUNbdcoXB1d3JVBp9N/view",
 } as const;
 
@@ -141,6 +142,9 @@ export default function Home() {
               </a>
               <a href={SOCIAL_LINKS.youtube} aria-label="YouTube" target="_blank" rel="noopener noreferrer">
                 <FaYoutube size={24} />
+              </a>
+              <a href={SOCIAL_LINKS.instagram} aria-label="Instagram" target="_blank" rel="noopener noreferrer">
+                <FaInstagram size={24} />
               </a>
               <a href={SOCIAL_LINKS.resume} aria-label="Resume" target="_blank" rel="noopener noreferrer">
                 <FaFileAlt size={24} />
