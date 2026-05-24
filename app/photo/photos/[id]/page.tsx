@@ -94,6 +94,7 @@ export default async function PhotoDetailPage({ params }: PhotoDetailPageProps) 
                   alt={photo.alt || photo.title || "Photo"}
                   width={800}
                   height={600}
+                  unoptimized
                   className="w-full h-auto"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 800px"
                   priority

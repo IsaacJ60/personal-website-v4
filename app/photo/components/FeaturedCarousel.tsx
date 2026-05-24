@@ -69,6 +69,7 @@ export default function FeaturedCarousel({ photos }: FeaturedCarouselProps) {
                   src={image.src}
                   alt={image.alt || image.title || "Photo"}
                   fill
+                  unoptimized
                   className="object-cover transition-transform duration-300 group-hover/image:scale-105"
                   sizes="(max-width: 768px) 50vw, 33vw"
                 />
