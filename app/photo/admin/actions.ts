@@ -40,6 +40,7 @@ function optionalText(value: FormDataEntryValue | null): string | null {
 function refreshPhotoPages(slug?: string) {
   revalidatePath("/photo");
   revalidatePath("/photo/gallery");
+  revalidatePath("/photo/gallery/[slug]", "page");
   revalidatePath("/photo/admin");
 
   if (slug) {
