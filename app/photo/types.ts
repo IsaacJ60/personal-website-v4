@@ -27,7 +27,6 @@ export type PhotoImage = {
   categories?: string[];
   tags?: string[];
   albumId?: string;
-  featured?: boolean;
   focusPoint?: PhotoFocusPoint;
   crop?: PhotoCrop;
 };

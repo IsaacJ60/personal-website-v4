@@ -7,11 +7,11 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { PhotoImage } from "../types";
 
-type FeaturedCarouselProps = {
+type RecentCarouselProps = {
   photos: (PhotoImage & { id: string; href?: string })[];
 };
 
-export default function FeaturedCarousel({ photos }: FeaturedCarouselProps) {
+export default function RecentCarousel({ photos }: RecentCarouselProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
     containScroll: "trimSnaps",

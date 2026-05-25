@@ -1,4 +1,4 @@
-import FeaturedCarousel from "./components/FeaturedCarousel";
+import RecentCarousel from "./components/RecentCarousel";
 import CollectionsSection from "./components/CollectionsSection";
 import BackToPhotosButton from "./components/BackToPhotosButton";
 import { getAllPhotos } from "./data/photos";
@@ -23,7 +23,7 @@ export default async function Page() {
     })
     .slice(0, 5);
 
-  // FeaturedCarousel expects every item to have an id string.
+  // RecentCarousel expects every item to have an id string.
   const recentPhotosWithId = recentPhotos.map((photo) => ({
     ...photo,
     id: photo.id ?? photo.src,
@@ -85,7 +85,7 @@ export default async function Page() {
       <section className="mt-6 space-y-4">
         <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-6 pb-2 pt-4 shadow-xl dark:border-neutral-800 dark:bg-neutral-900">
           <div className="mx-auto max-w-5xl">
-            <FeaturedCarousel photos={recentPhotosWithId} />
+            <RecentCarousel photos={recentPhotosWithId} />
           </div>
         </div>
 
