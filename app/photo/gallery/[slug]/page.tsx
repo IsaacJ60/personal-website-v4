@@ -15,7 +15,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const collection = getCollectionBySlug(slug);
+  const collection = await getCollectionBySlug(slug);
   if (!collection) return {};
 
   return {
@@ -26,22 +26,28 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function CollectionGalleryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const collection = getCollectionBySlug(slug);
+  const collection = await getCollectionBySlug(slug);
 
   if (!collection) {
     notFound();
   }
 
-  const galleryItems: GalleryTile[] = collection.items.map((item) => {
+  const galleryItems = (await Promise.all(collection.items.map(async (item): Promise<GalleryTile | null> => {
     if ("photoIds" in item) {
-      const peekSrcs = item.photoIds
-        .map((id) => getPhotoById(id))
-        .filter((p): p is CatalogPhoto => !!p && !!p.src)
-        .map((p) => p.src)
-        .slice(1, 5);
+      const photos = (await Promise.all(item.photoIds.map((id) => getPhotoById(id))))
+        .filter((p): p is CatalogPhoto => !!p && !!p.src);
+      const coverPhoto = photos.find((photo) => photo.id === item.photoIds[0]) ?? photos[0];
+      const peekSrcs = photos
+        .filter((photo) => photo.id !== item.photoIds[0])
+        .map((photo) => photo.src)
+        .slice(0, 4);
+
+      if (!coverPhoto) {
+        return null;
+      }
 
       return {
-        ...item.coverPhoto,
+        ...coverPhoto,
         id: item.id,
         title: item.title,
         alt: item.title,
@@ -70,7 +76,7 @@ export default async function CollectionGalleryPage({ params }: { params: Promis
       href: `/photo/photos/${item.id}`,
       isBundle: false,
     };
-  });
+  }))).filter((item): item is GalleryTile => item !== null);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12 space-y-8">

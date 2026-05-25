@@ -14,8 +14,11 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "media.isaacjiang.ca",
+        pathname: "/camera/**",
       },
     ],
+
+    qualities: [60, 70, 75, 90],
   },
 };
 

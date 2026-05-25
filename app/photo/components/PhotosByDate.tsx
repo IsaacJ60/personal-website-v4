@@ -8,6 +8,7 @@ import { Layers3 } from "lucide-react";
 type SmallPhoto = {
   id: string;
   src: string;
+  title?: string;
   alt?: string;
   href?: string;
   date?: string;
@@ -99,7 +100,7 @@ export default function PhotosByDate({ dateMap }: Props) {
           Explore photos chronologically. Click a date to view all images from that day.
         </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-96 w-full">
+      <div className="grid w-full grid-cols-1 gap-6 md:h-96 md:grid-cols-3">
         <div className="md:col-span-1 border border-neutral-200/50 dark:border-neutral-700/50 rounded-xl p-4 bg-neutral-50 dark:bg-neutral-900/20">
           <div className="flex items-center justify-between mb-2">
             <button onClick={handlePrev} className="px-2 py-0 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900/50">‹</button>
@@ -123,7 +124,7 @@ export default function PhotosByDate({ dateMap }: Props) {
               const count = dateMap[dateKey]?.length ?? 0;
               const isSelected = selectedDate === dateKey;
 
-              const bgClass = isSelected ? 'bg-neutral-900 text-white' : getCountColor(count);
+              const bgClass = getCountColor(count);
               return (
                 <button
                   key={dateKey}
@@ -182,7 +183,7 @@ export default function PhotosByDate({ dateMap }: Props) {
                         <div className="absolute left-3 top-3 right-3">
                           <div className="inline-flex max-w-full items-start gap-1.5 rounded-md bg-black/35 px-2 py-1 text-sm font-medium text-white backdrop-blur-[1px]">
                             {isBundlePhoto && <Layers3 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/90" />}
-                            <span className="line-clamp-2">{p.alt ?? 'Untitled photo'}</span>
+                            <span className="line-clamp-2">{p.title ?? 'Untitled photo'}</span>
                           </div>
                         </div>
                       </div>
@@ -202,7 +203,7 @@ export default function PhotosByDate({ dateMap }: Props) {
                         <div className="absolute left-3 top-3 right-3">
                           <div className="inline-flex max-w-full items-start gap-1.5 rounded-md bg-black/35 px-2 py-1 text-sm font-medium text-white backdrop-blur-[1px]">
                             {isBundlePhoto && <Layers3 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-white/90" />}
-                            <span className="line-clamp-2">{p.alt ?? 'Untitled photo'}</span>
+                            <span className="line-clamp-2">{p.title ?? 'Untitled photo'}</span>
                           </div>
                         </div>
                       </div>

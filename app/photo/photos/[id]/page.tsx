@@ -8,7 +8,7 @@ import BackToPhotosButton from "../../components/BackToPhotosButton";
 export const dynamicParams = true;
 
 export async function generateStaticParams() {
-  const ids = getAllPhotoIds();
+  const ids = await getAllPhotoIds();
   return ids.map((id) => ({
     id,
   }));
@@ -22,13 +22,13 @@ interface PhotoDetailPageProps {
 
 export default async function PhotoDetailPage({ params }: PhotoDetailPageProps) {
   const { id } = await params;
-  const photo = getPhotoById(id);
+  const photo = await getPhotoById(id);
 
   if (!photo) {
     notFound();
   }
 
-  const allIds = getAllPhotoIds();
+  const allIds = await getAllPhotoIds();
   const currentIndex = allIds.indexOf(id);
   const prevId = currentIndex > 0 ? allIds[currentIndex - 1] : null;
   const nextId = currentIndex < allIds.length - 1 ? allIds[currentIndex + 1] : null;

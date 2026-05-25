@@ -45,7 +45,6 @@ export type Bundle = {
   title: string;
   description?: string;
   photoIds: string[];
-  coverPhotoId: string;
   dateTaken?: string;
   locationName?: string;
   categories?: string[];

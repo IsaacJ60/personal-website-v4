@@ -2,17 +2,26 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { Bundle, PhotoImage } from "../types";
+import type { Bundle, PhotoFocusPoint } from "../types";
 
 type BundleCardProps = {
   bundle: Bundle;
-  coverPhoto: PhotoImage;
+  coverSrc: string;
+  coverAlt?: string;
+  coverTitle?: string;
+  coverFocusPoint?: PhotoFocusPoint;
 };
 
-export default function BundleCard({ bundle, coverPhoto }: BundleCardProps) {
+export default function BundleCard({
+  bundle,
+  coverSrc,
+  coverAlt,
+  coverTitle,
+  coverFocusPoint,
+}: BundleCardProps) {
   const primaryCategory = bundle.categories?.[0];
-  const objectPosition = coverPhoto.focusPoint
-    ? `${coverPhoto.focusPoint.x * 100}% ${coverPhoto.focusPoint.y * 100}%`
+  const objectPosition = coverFocusPoint
+    ? `${coverFocusPoint.x * 100}% ${coverFocusPoint.y * 100}%`
     : undefined;
 
   return (
@@ -22,8 +31,8 @@ export default function BundleCard({ bundle, coverPhoto }: BundleCardProps) {
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-neutral-200 dark:bg-neutral-900">
         <Image
-          src={coverPhoto.src}
-          alt={coverPhoto.alt ?? coverPhoto.title ?? "Bundle cover"}
+          src={coverSrc}
+          alt={coverAlt ?? coverTitle ?? "Bundle cover"}
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
           style={objectPosition ? { objectPosition } : undefined}

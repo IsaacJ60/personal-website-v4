@@ -1,8 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { COLLECTIONS_DATA } from "../data/collections";
+import { getCollectionsData } from "../data/collections";
 
-export default function CollectionsSection() {
+export default async function CollectionsSection() {
+  const collections = await getCollectionsData();
+
   return (
     <section className="mt-12">
       <div className="mb-4 flex items-start justify-between gap-4">
@@ -22,7 +24,7 @@ export default function CollectionsSection() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {COLLECTIONS_DATA.map((collection) => (
+        {collections.map((collection) => (
           <Link
             key={collection.slug}
             href={`/photo/gallery/${collection.slug}`}

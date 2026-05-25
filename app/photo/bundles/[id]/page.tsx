@@ -8,7 +8,7 @@ import PhotoCard from "../../components/PhotoCard";
 export const dynamicParams = true;
 
 export async function generateStaticParams() {
-  const ids = getAllBundleIds();
+  const ids = await getAllBundleIds();
   return ids.map((id) => ({
     id,
   }));
@@ -22,13 +22,13 @@ interface BundleDetailPageProps {
 
 export default async function BundleDetailPage({ params }: BundleDetailPageProps) {
   const { id } = await params;
-  const bundle = getBundleById(id);
+  const bundle = await getBundleById(id);
 
   if (!bundle) {
     notFound();
   }
 
-  const photos = getBundlePhotos(id);
+  const photos = await getBundlePhotos(id);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12 space-y-8">

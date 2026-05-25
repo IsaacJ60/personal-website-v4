@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { type GalleryTile } from "../types";
-import { filterPhotos } from "../data/photos";
+import { filterPhotos } from "../data/photo-filters";
 import { ChevronDown, X } from "lucide-react";
 import PhotoCard from "./PhotoCard";
 
