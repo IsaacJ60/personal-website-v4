@@ -2,11 +2,12 @@
 
 import { useCallback, useState, useRef } from "react";
 import { Upload, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import exifr from "exifr";
 
-type UploadStatus = "idle" | "validating" | "presigning" | "uploading" | "success" | "error";
+type UploadStatus = "idle" | "validating" | "extracting" | "presigning" | "uploading" | "success" | "error";
 
 type FileUploaderProps = {
-  onUploadComplete: (objectKey: string, filename: string) => void;
+  onUploadComplete: (objectKey: string, filename: string, exifDate?: string) => void;
   onUploadError?: (error: string) => void;
   dateTaken?: string;
   accept?: string;
@@ -66,6 +67,28 @@ export default function FileUploader({
         return;
       }
 
+      // Extract EXIF date
+      setStatus("extracting");
+      let exifDate: string | undefined;
+
+      try {
+        const exif = await exifr.parse(file, { pick: ["DateTimeOriginal", "CreateDate"] });
+        const rawDate = exif?.DateTimeOriginal ?? exif?.CreateDate;
+
+        if (rawDate instanceof Date) {
+          // Format as YYYY-MM-DD
+          const year = rawDate.getFullYear();
+          const month = String(rawDate.getMonth() + 1).padStart(2, "0");
+          const day = String(rawDate.getDate()).padStart(2, "0");
+          exifDate = `${year}-${month}-${day}`;
+        }
+      } catch {
+        // EXIF extraction failed, continue without it
+      }
+
+      // Use EXIF date for folder organization, fall back to provided dateTaken or today
+      const folderDate = exifDate ?? dateTaken;
+
       // Get presigned URL
       setStatus("presigning");
 
@@ -77,7 +100,7 @@ export default function FileUploader({
             filename: file.name,
             contentType: file.type,
             fileSize: file.size,
-            dateTaken,
+            dateTaken: folderDate,
           }),
         });
 
@@ -130,7 +153,7 @@ export default function FileUploader({
 
         setStatus("success");
         setProgress(100);
-        onUploadComplete(objectKey, file.name);
+        onUploadComplete(objectKey, file.name, exifDate);
       } catch (err) {
         handleError(err instanceof Error ? err.message : "Upload failed");
       }
@@ -177,7 +200,7 @@ export default function FileUploader({
     }
   }, [status]);
 
-  const isUploading = status === "validating" || status === "presigning" || status === "uploading";
+  const isUploading = status === "validating" || status === "extracting" || status === "presigning" || status === "uploading";
 
   return (
     <div className="space-y-2">
@@ -221,6 +244,7 @@ export default function FileUploader({
             <Loader2 className="mb-2 h-8 w-8 animate-spin text-blue-500" />
             <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
               {status === "validating" && "Validating..."}
+              {status === "extracting" && "Reading metadata..."}
               {status === "presigning" && "Preparing upload..."}
               {status === "uploading" && `Uploading... ${progress}%`}
             </p>
