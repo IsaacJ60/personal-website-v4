@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { logoutAction } from "./login/actions";
 import AdminPhotoList from "./components/AdminPhotoList";
 import AddPhotoForm from "./components/AddPhotoForm";
+import BundleManager from "./components/BundleManager";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,23 @@ function getPhotoUrl(objectKey: string) {
 
     return `${MEDIA_BASE_URL}/camera/${encodedPath}`;
 }
+
+type BundleOption = {
+    id: string;
+    title: string;
+    categories: string[];
+};
+
+type AdminBundle = {
+    id: string;
+    title: string;
+    description: string | null;
+    categories: string[];
+    date_taken: string | null;
+    location_name: string | null;
+    published: boolean;
+    photoCount: number;
+};
 
 export default async function AdminPhotosPage() {
     const cookieStore = await cookies();
@@ -36,30 +54,91 @@ export default async function AdminPhotosPage() {
         redirect("/photo/admin/login");
     }
 
-    const { data: photos, error } = await supabase
-        .from("photos")
-        .select(`
-      id,
-      slug,
-      object_key,
-      title,
-      date_taken,
-      categories,
-      alt_text,
-      description,
-      location,
-      published,
-      portfolio_order
-    `)
-        .order("created_at", { ascending: false });
+    const [photosResult, bundlesResult, bundlePhotosResult] = await Promise.all([
+        supabase
+            .from("photos")
+            .select(`
+                id,
+                slug,
+                object_key,
+                title,
+                date_taken,
+                categories,
+                alt_text,
+                description,
+                location,
+                published,
+                portfolio_order
+            `)
+            .order("created_at", { ascending: false }),
+        supabase
+            .from("bundles")
+            .select("id, title, description, categories, date_taken, location_name, published")
+            .order("title", { ascending: true }),
+        supabase
+            .from("bundle_photos")
+            .select("bundle_id, photo_slug, position")
+            .order("position", { ascending: true }),
+    ]);
 
-    if (error) {
-        throw new Error(`Could not load admin photos: ${error.message}`);
+    if (photosResult.error) {
+        throw new Error(`Could not load admin photos: ${photosResult.error.message}`);
     }
 
+    if (bundlesResult.error) {
+        throw new Error(`Could not load bundles: ${bundlesResult.error.message}`);
+    }
+
+    if (bundlePhotosResult.error) {
+        throw new Error(`Could not load bundle photos: ${bundlePhotosResult.error.message}`);
+    }
+
+    const photos = photosResult.data ?? [];
+    const bundlesRaw = bundlesResult.data ?? [];
+    const bundlePhotos = bundlePhotosResult.data ?? [];
+
+    // Build bundle options for dropdowns (id + title + categories)
+    const bundleOptions: BundleOption[] = bundlesRaw.map((b) => ({
+        id: b.id,
+        title: b.title,
+        categories: b.categories ?? [],
+    }));
+
+    // Count photos per bundle
+    const bundlePhotoCount = new Map<string, number>();
+    for (const bp of bundlePhotos) {
+        bundlePhotoCount.set(bp.bundle_id, (bundlePhotoCount.get(bp.bundle_id) ?? 0) + 1);
+    }
+
+    // Build full bundle data for BundleManager
+    const adminBundles: AdminBundle[] = bundlesRaw.map((b) => ({
+        id: b.id,
+        title: b.title,
+        description: b.description,
+        categories: b.categories ?? [],
+        date_taken: b.date_taken,
+        location_name: b.location_name,
+        published: b.published,
+        photoCount: bundlePhotoCount.get(b.id) ?? 0,
+    }));
+
+    // Build a map of photo slug -> bundle ids
+    const photoBundleMap = new Map<string, string[]>();
+    for (const bp of bundlePhotos) {
+        const existing = photoBundleMap.get(bp.photo_slug) ?? [];
+        existing.push(bp.bundle_id);
+        photoBundleMap.set(bp.photo_slug, existing);
+    }
+
+    // Attach bundle info to each photo
+    const photosWithBundles = photos.map((photo) => ({
+        ...photo,
+        bundleIds: photoBundleMap.get(photo.slug) ?? [],
+    }));
+
     return (
-        <main className="mx-auto flex h-dvh max-w-7xl flex-col overflow-hidden px-4 py-6">
-            <header className="mb-6 flex shrink-0 flex-wrap items-start justify-between gap-4">
+        <main className="mx-auto max-w-7xl px-4 py-6">
+            <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                         IJ.PRIME Admin
@@ -82,82 +161,20 @@ export default async function AdminPhotosPage() {
                 </form>
             </header>
 
-            <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
-                <section className="min-h-0 overflow-y-auto overscroll-contain pr-2">
-                        <AddPhotoForm />
-                </section>
+            {/* Add Photo Form - full width at top */}
+            <section className="mb-6">
+                <AddPhotoForm bundles={bundleOptions} />
+            </section>
 
-                <AdminPhotoList photos={photos ?? []} />
-            </div>
+            {/* Photo List - contained scrollable area */}
+            <section className="mb-6 h-[900px]">
+                <AdminPhotoList photos={photosWithBundles} bundles={bundleOptions} />
+            </section>
+
+            {/* Bundle Manager */}
+            <section className="pb-6">
+                <BundleManager bundles={adminBundles} />
+            </section>
         </main>
-    );
-}
-
-function Field({
-    label,
-    name,
-    type = "text",
-    placeholder,
-    required = false,
-}: {
-    label: string;
-    name: string;
-    type?: string;
-    placeholder?: string;
-    required?: boolean;
-}) {
-    return (
-        <div>
-            <label htmlFor={name} className="mb-1.5 block text-sm font-medium">
-                {label}
-            </label>
-
-            <input
-                id={name}
-                name={name}
-                type={type}
-                placeholder={placeholder}
-                required={required}
-                className="w-full rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-200"
-            />
-        </div>
-    );
-}
-
-function TextArea({
-    label,
-    name,
-}: {
-    label: string;
-    name: string;
-}) {
-    return (
-        <div>
-            <label htmlFor={name} className="mb-1.5 block text-sm font-medium">
-                {label}
-            </label>
-
-            <textarea
-                id={name}
-                name={name}
-                rows={3}
-                className="w-full resize-none rounded-md border border-neutral-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-200"
-            />
-        </div>
-    );
-}
-
-function Checkbox({
-    label,
-    name,
-}: {
-    label: string;
-    name: string;
-}) {
-    return (
-        <label className="flex items-center gap-2">
-            <input type="checkbox" name={name} />
-            {label}
-        </label>
     );
 }
