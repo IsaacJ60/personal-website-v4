@@ -519,7 +519,6 @@ function PhotoCard({
         !buttonRef.current?.contains(target)
       ) {
         setMenuOpen(false);
-        setBundleMenuOpen(false);
       }
     };
 
