@@ -85,6 +85,7 @@ function SelectField({
     onChange,
     options,
     required = false,
+    placeholder = "Select an option",
 }: {
     label: string;
     name: string;
@@ -92,6 +93,7 @@ function SelectField({
     onChange: (value: string) => void;
     options: readonly string[];
     required?: boolean;
+    placeholder?: string;
 }) {
     return (
         <div>
@@ -108,6 +110,13 @@ function SelectField({
                     required={required}
                     className="w-full appearance-none rounded-md border border-neutral-300 bg-white px-3 py-2 pr-10 text-sm text-neutral-900 outline-none transition-colors focus:border-neutral-900 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:focus:border-neutral-200 dark:[color-scheme:dark]"
                 >
+                    <option
+                        value=""
+                        disabled
+                        className="bg-white text-neutral-400 dark:bg-neutral-950 dark:text-neutral-600"
+                    >
+                        {placeholder}
+                    </option>
                     {options.map((option) => (
                         <option
                             key={option}
@@ -142,7 +151,7 @@ export default function AddPhotoForm() {
     const [dateTaken, setDateTaken] = useState("");
     const [altText, setAltText] = useState("");
     const [primaryCategory, setPrimaryCategory] =
-        useState<(typeof PRIMARY_CATEGORIES)[number]>("Landscapes");
+        useState<(typeof PRIMARY_CATEGORIES)[number] | "">("");
     const [location, setLocation] = useState("");
 
     const previewUrl = objectKey ? getPhotoUrl(objectKey) : null;
@@ -159,7 +168,7 @@ export default function AddPhotoForm() {
         setSlug("");
         setDateTaken("");
         setAltText("");
-        setPrimaryCategory("Landscapes");
+        setPrimaryCategory("");
         setLocation("");
     }, [state.success, state.submissionId]);
 
@@ -282,6 +291,7 @@ export default function AddPhotoForm() {
                         )
                     }
                     options={PRIMARY_CATEGORIES}
+                    placeholder="Choose a collection"
                     required
                 />
 

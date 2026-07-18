@@ -11,17 +11,17 @@ export const metadata = {
 export default async function Page() {
   const allPhotos = await getAllPhotos();
 
-  // Recent work — pick latest 5 items, including bundle covers and photos.
+  // Recent work — pick top 5 items by portfolio order (manually curated order).
   const recentPhotos = allPhotos
-    .filter((photo) => Boolean(photo.dateTaken))
+    .filter((photo) => photo.portfolioOrder !== null)
     .sort((a, b) => {
-      if (!a.dateTaken || !b.dateTaken) {
-        return 0;
-      }
+      // Higher portfolio_order means more recent/featured
+      const orderA = a.portfolioOrder ?? -Infinity;
+      const orderB = b.portfolioOrder ?? -Infinity;
 
-      return b.dateTaken.localeCompare(a.dateTaken);
+      return orderB - orderA;
     })
-    .slice(0, 5);
+    .slice(0, 6);
 
   // RecentCarousel expects every item to have an id string.
   const recentPhotosWithId = recentPhotos.map((photo) => ({

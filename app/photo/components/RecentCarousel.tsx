@@ -14,14 +14,15 @@ type RecentCarouselProps = {
 export default function RecentCarousel({ photos }: RecentCarouselProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
-    containScroll: "trimSnaps",
+    containScroll: false,
     skipSnaps: false,
     slidesToScroll: 1,
   });
 
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
-  const [current, setCurrent] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
 
   const scrollPrev = useCallback(
     () => emblaApi && emblaApi.scrollPrev(),
@@ -33,21 +34,34 @@ export default function RecentCarousel({ photos }: RecentCarouselProps) {
     [emblaApi]
   );
 
+  const scrollTo = useCallback(
+    (index: number) => emblaApi && emblaApi.scrollTo(index),
+    [emblaApi]
+  );
+
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
     setCanScrollPrev(emblaApi.canScrollPrev());
     setCanScrollNext(emblaApi.canScrollNext());
-    setCurrent(emblaApi.selectedScrollSnap());
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  const onInit = useCallback(() => {
+    if (!emblaApi) return;
+    setScrollSnaps(emblaApi.scrollSnapList());
   }, [emblaApi]);
 
   useEffect(() => {
     if (!emblaApi) return;
+    onInit();
     onSelect();
     emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onInit);
     return () => {
       emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onInit);
     };
-  }, [emblaApi, onSelect]);
+  }, [emblaApi, onInit, onSelect]);
 
   return (
     <section className="mb-4">
@@ -58,21 +72,23 @@ export default function RecentCarousel({ photos }: RecentCarouselProps) {
           ref={emblaRef}
           className="overflow-hidden rounded-lg"
         >
-          <div className="flex gap-2">
+          <div className="flex -ml-2">
             {photos.map((image) => (
               <Link
-                  key={image.id}
-                  href={image.href ?? `/photo/photos/${image.id}`}
-                  className="relative flex-shrink-0 w-1/3 aspect-[4/3] select-none overflow-hidden rounded-md group/image"
-                >
-                <Image
-                  src={image.src}
-                  alt={image.alt || image.title || "Photo"}
-                  fill
-                  unoptimized
-                  className="object-cover transition-transform duration-300 group-hover/image:scale-105"
-                  sizes="(max-width: 768px) 50vw, 33vw"
-                />
+                key={image.id}
+                href={image.href ?? `/photo/photos/${image.id}`}
+                className="relative flex-[0_0_calc(100%/3)] min-w-0 pl-2"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden rounded-md group/image">
+                  <Image
+                    src={image.src}
+                    alt={image.alt || image.title || "Photo"}
+                    fill
+                    unoptimized
+                    className="object-cover transition-transform duration-300 group-hover/image:scale-105"
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                  />
+                </div>
               </Link>
             ))}
           </div>
@@ -99,18 +115,15 @@ export default function RecentCarousel({ photos }: RecentCarouselProps) {
         </button>
       </div>
 
-      {/* Dot Indicators */}
-      <div className="flex gap-2 justify-center">
-          {photos.map((_, index) => (
+      {/* Dot Indicators - based on actual scroll snaps */}
+      {scrollSnaps.length > 1 && (
+        <div className="flex gap-2 justify-center">
+          {scrollSnaps.map((_, index) => (
             <button
               key={index}
-              onClick={() => {
-                if (emblaApi) {
-                  emblaApi.scrollTo(index);
-                }
-              }}
+              onClick={() => scrollTo(index)}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                index === current
+                index === selectedIndex
                   ? "bg-neutral-900 dark:bg-neutral-100 w-6"
                   : "bg-neutral-300 dark:bg-neutral-700 hover:bg-neutral-400 dark:hover:bg-neutral-600"
               }`}
@@ -118,6 +131,7 @@ export default function RecentCarousel({ photos }: RecentCarouselProps) {
             />
           ))}
         </div>
-      </section>
-    );
-  }
+      )}
+    </section>
+  );
+}

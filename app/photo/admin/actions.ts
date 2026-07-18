@@ -156,13 +156,41 @@ export async function deletePhotoAction(formData: FormData) {
 
     const id = String(formData.get("id") ?? "");
 
-    const { error } = await supabase
+    // Get the portfolio_order of the photo being deleted
+    const { data: deletedPhoto, error: fetchError } = await supabase
+        .from("photos")
+        .select("portfolio_order")
+        .eq("id", id)
+        .single();
+
+    if (fetchError) {
+        throw new Error(`Could not fetch photo: ${fetchError.message}`);
+    }
+
+    // Delete the photo
+    const { error: deleteError } = await supabase
         .from("photos")
         .delete()
         .eq("id", id);
 
-    if (error) {
-        throw new Error(`Could not delete photo: ${error.message}`);
+    if (deleteError) {
+        throw new Error(`Could not delete photo: ${deleteError.message}`);
+    }
+
+    // Update portfolio_order for all photos that came after the deleted one
+    if (deletedPhoto.portfolio_order !== null) {
+        const { error: updateError } = await supabase.rpc(
+            "decrement_portfolio_order_after",
+            {
+                deleted_order: deletedPhoto.portfolio_order,
+            }
+        );
+
+        if (updateError) {
+            throw new Error(
+                `Could not update portfolio order: ${updateError.message}`
+            );
+        }
     }
 
     refreshPhotoPages();

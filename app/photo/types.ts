@@ -29,6 +29,7 @@ export type PhotoImage = {
   albumId?: string;
   focusPoint?: PhotoFocusPoint;
   crop?: PhotoCrop;
+  portfolioOrder?: number | null;
 };
 
 export type GalleryTile = PhotoImage & {

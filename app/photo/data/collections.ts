@@ -26,7 +26,7 @@ type CollectionDefinition = Omit<
   category: string;
 };
 
-export type CatalogPhoto = PhotoImage & { id: string };
+export type CatalogPhoto = PhotoImage & { id: string; portfolioOrder: number | null };
 
 type PhotoRow = {
   slug: string;
@@ -80,6 +80,7 @@ function toCatalogPhoto(row: PhotoRow): CatalogPhoto {
     dateTaken: row.date_taken,
     categories: row.categories ?? [],
     locationName: row.location ?? undefined,
+    portfolioOrder: row.portfolio_order,
   };
 }
 
