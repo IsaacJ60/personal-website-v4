@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,17 +8,53 @@ import BackToPhotosButton from "../../components/BackToPhotosButton";
 
 export const dynamicParams = true;
 
+interface PhotoDetailPageProps {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export async function generateMetadata({ params }: PhotoDetailPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const photo = await getPhotoById(id);
+
+  if (!photo) {
+    return { title: "Photo Not Found" };
+  }
+
+  const title = photo.title || "Photo";
+  const description = photo.description || photo.locationName || "Photo by Isaac Jiang";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      images: [
+        {
+          url: photo.src,
+          alt: photo.alt || title,
+          ...(photo.width && { width: photo.width }),
+          ...(photo.height && { height: photo.height }),
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [photo.src],
+    },
+  };
+}
+
 export async function generateStaticParams() {
   const ids = await getAllPhotoIds();
   return ids.map((id) => ({
     id,
   }));
-}
-
-interface PhotoDetailPageProps {
-  params: Promise<{
-    id: string;
-  }>;
 }
 
 export default async function PhotoDetailPage({ params }: PhotoDetailPageProps) {
