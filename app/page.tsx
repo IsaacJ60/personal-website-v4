@@ -113,7 +113,7 @@ export default function Home() {
 
 
           <p className="text-muted-foreground">
-            CS @ University of Waterloo, SWE Intern @ SAP
+            University of Waterloo CS
           </p>
 
           <section className="space-y-4 mb-4">
@@ -226,7 +226,7 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="text-md uppercase text-muted-foreground tracking-wide">
-                    Projects
+                    Technical Projects
                   </p>
                   <div className="mt-2">
                     <ProjectPreview />

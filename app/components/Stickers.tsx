@@ -27,7 +27,7 @@ type Sticker = {
 const STICKERS: Sticker[] = [
     {
         id: "youtube",
-        label: "Videos",
+        label: "Media",
         imageSrc: "/images/youtube.webp",
         href: "https://www.isaacjiang.ca/photo",
         x: 23,
@@ -35,7 +35,7 @@ const STICKERS: Sticker[] = [
     },
     {
         id: "valorant",
-        label: "Valorant",
+        label: "Immortal",
         imageSrc: "/images/valorant.webp",
         href: "https://tracker.gg/valorant/profile/riot/IP%20Snatcher%23dns",
         x: 77,
@@ -67,7 +67,7 @@ const STICKERS: Sticker[] = [
     },
     {
         id: "hackathons",
-        label: "Hackathons",
+        label: "6x Hackathon Winner",
         imageSrc: "/images/computer.webp",
         href: "https://devpost.com/isaac-jiang66",
         x: 65,

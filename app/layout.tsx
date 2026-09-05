@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Isaac Jiang",
-  description: "CS @ University of Waterloo, Incoming SWE Intern @ SAP",
+  description: "CS @ University of Waterloo",
   metadataBase: new URL("https://isaacjiang.ca"),
 
   icons: {
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 
   openGraph: {
     title: "Isaac Jiang",
-    description: "CS @ University of Waterloo, Incoming SWE Intern @ SAP",
+    description: "CS @ University of Waterloo",
     url: "https://isaacjiang.ca",
     siteName: "Isaac Jiang",
     images: [
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Isaac Jiang",
-    description: "CS @ University of Waterloo, Incoming SWE Intern @ SAP",
+    description: "CS @ University of Waterloo",
     images: ["/og.jpg"],
   },
 };
