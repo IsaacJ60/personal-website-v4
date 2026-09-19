@@ -177,19 +177,6 @@ export default function Home() {
 
             <button
               type="button"
-              onClick={() => setActiveView("projects")}
-              className={`
-              flex-1 rounded-md px-3 py-1.5 transition cursor-pointer
-              ${activeView === "projects"
-                  ? "bg-card text-foreground"
-                  : "text-muted-foreground hover:bg-card/60"}
-            `}
-            >
-              Projects
-            </button>
-
-            <button
-              type="button"
               onClick={() => setActiveView("experience")}
               className={`
               flex-1 rounded-md px-3 py-1.5 transition cursor-pointer
@@ -199,6 +186,19 @@ export default function Home() {
             `}
             >
               Experience
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveView("projects")}
+              className={`
+              flex-1 rounded-md px-3 py-1.5 transition cursor-pointer
+              ${activeView === "projects"
+                  ? "bg-card text-foreground"
+                  : "text-muted-foreground hover:bg-card/60"}
+            `}
+            >
+              Projects
             </button>
 
             <button

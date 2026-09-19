@@ -22,10 +22,16 @@ type ExperienceTimelineProps = {
 
 const experiences: Experience[] = [
   {
+    role: "SWE Intern",
+    company: "Shopify",
+    period: "Jan 2027 - April 2027",
+    description: "Incoming SWE Intern",
+  },
+  {
     role: "SWE Intern", 
     company: "SAP",
     period: "Jan 2026 - Aug 2026",
-    description: "Filters and Metrics for SAP Analytics Cloud.",
+    description: "Filters and Metrics for SAP Analytics Cloud",
   },
   {
     role: "SWE Intern",
@@ -66,7 +72,7 @@ const experiences: Experience[] = [
           className="text-green-600 underline"
         >
           ReQue
-        </a>, a query refinement workflow.
+        </a>, a query refinement workflow
     </>,
   },
 ];
