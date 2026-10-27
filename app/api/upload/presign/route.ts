@@ -5,7 +5,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createClient } from "@/utils/supabase/server";
 import { r2Client, R2_BUCKET_NAME } from "@/utils/r2/client";
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
 const ALLOWED_CONTENT_TYPES = ["image/jpeg", "image/jpg"];
 
 function sanitizeFilename(filename: string): string {
