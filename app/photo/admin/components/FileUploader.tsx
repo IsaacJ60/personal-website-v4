@@ -19,7 +19,7 @@ export default function FileUploader({
   onUploadError,
   dateTaken,
   accept = "image/jpeg,image/jpg",
-  maxSizeMB = 20,
+  maxSizeMB = 30,
 }: FileUploaderProps) {
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [progress, setProgress] = useState(0);
