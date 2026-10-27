@@ -24,6 +24,9 @@ function monthName(year: number, month: number) {
 
 export default function PhotosByDate({ dateMap }: Props) {
   const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  const todayKey = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -50,12 +53,21 @@ export default function PhotosByDate({ dateMap }: Props) {
   };
 
   const handleNext = () => {
+    if (
+      viewYear > currentYear ||
+      (viewYear === currentYear && viewMonth >= currentMonth)
+    ) {
+      return;
+    }
+
     if (viewMonth === 11) {
       setViewMonth(0);
       setViewYear((y) => y + 1);
     } else setViewMonth((m) => m + 1);
   };
 
+  const isAtCurrentMonth =
+    viewYear === currentYear && viewMonth === currentMonth;
   const selectedPhotos = selectedDate ? dateMap[selectedDate] ?? [] : [];
 
   // Get background color class based on photo count (heatmap)
@@ -70,7 +82,7 @@ export default function PhotosByDate({ dateMap }: Props) {
   // Auto-select the most recent date that has photos on mount
   useEffect(() => {
     if (selectedDate) return;
-    const keys = Object.keys(dateMap);
+    const keys = Object.keys(dateMap).filter((key) => key <= todayKey);
     if (keys.length === 0) return;
     // keys are ISO-like YYYY-MM-DD so lexicographic sort works
     const latest = keys.sort().reverse()[0];
@@ -80,7 +92,7 @@ export default function PhotosByDate({ dateMap }: Props) {
     const m = Number(latest.slice(5, 7)) - 1;
     setViewYear(y);
     setViewMonth(m);
-  }, [dateMap, selectedDate]);
+  }, [dateMap, selectedDate, todayKey]);
 
   const formatDateDisplay = (dateKey: string) => {
     try {
@@ -105,7 +117,15 @@ export default function PhotosByDate({ dateMap }: Props) {
           <div className="flex items-center justify-between mb-2">
             <button onClick={handlePrev} className="px-2 py-0 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900/50">‹</button>
             <div className="text-sm font-medium">{monthName(viewYear, viewMonth)}</div>
-            <button onClick={handleNext} className="px-2 py-0 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900/50">›</button>
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={isAtCurrentMonth}
+              aria-label="Next month"
+              className="px-2 py-0 rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-900/50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              ›
+            </button>
           </div>
 
           <div className="grid grid-cols-7 gap-1 text-xs text-center text-muted-foreground">
@@ -123,14 +143,21 @@ export default function PhotosByDate({ dateMap }: Props) {
               const dateKey = `${yyyy}-${mm}-${dd}`;
               const count = dateMap[dateKey]?.length ?? 0;
               const isSelected = selectedDate === dateKey;
+              const hasPhotos = count > 0;
 
               const bgClass = getCountColor(count);
               return (
                 <button
                   key={dateKey}
+                  type="button"
+                  disabled={!hasPhotos}
                   onClick={() => setSelectedDate(dateKey)}
                   aria-pressed={isSelected}
-                  className={`group relative overflow-hidden flex cursor-pointer flex-col items-center justify-center h-10 text-xs rounded-md border border-neutral-200/20 dark:border-neutral-700/30 ${bgClass}`}
+                  className={`group relative flex h-10 flex-col items-center justify-center overflow-hidden rounded-md border border-neutral-200/20 text-xs dark:border-neutral-700/30 ${bgClass} ${
+                    hasPhotos
+                      ? "cursor-pointer"
+                      : "cursor-not-allowed opacity-50"
+                  }`}
                 >
                   <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-[-60%] w-[70%] bg-gradient-to-r from-transparent via-white/45 to-transparent skew-x-[-20deg] opacity-0 transition-all duration-700 ease-out group-hover:opacity-100 group-hover:translate-x-[320%] dark:via-white/20" />
                   <div className="text-sm font-medium leading-none">{cell}</div>
