@@ -10,10 +10,25 @@ export const metadata = {
 
 export default async function PhotoSearchPage() {
   const allPhotos = await getAllPhotos();
+  const sortedPhotos = [...allPhotos].sort((a, b) => {
+    if (!a.dateTaken && !b.dateTaken) {
+      return 0;
+    }
+
+    if (!a.dateTaken) {
+      return 1;
+    }
+
+    if (!b.dateTaken) {
+      return -1;
+    }
+
+    return b.dateTaken.localeCompare(a.dateTaken);
+  });
 
   const locations = Array.from(
     new Set(
-      allPhotos
+      sortedPhotos
         .map((photo) => photo.locationName)
         .filter((location): location is string => Boolean(location))
     )
@@ -21,19 +36,19 @@ export default async function PhotoSearchPage() {
 
   const categories = Array.from(
     new Set(
-      allPhotos.flatMap((photo) => photo.categories ?? [])
+      sortedPhotos.flatMap((photo) => photo.categories ?? [])
     )
   ).sort();
 
   const tags = Array.from(
     new Set(
-      allPhotos.flatMap((photo) => photo.tags ?? [])
+      sortedPhotos.flatMap((photo) => photo.tags ?? [])
     )
   ).sort();
 
   const dates = Array.from(
     new Set(
-      allPhotos
+      sortedPhotos
         .map((photo) => photo.dateTaken)
         .filter((date): date is string => Boolean(date))
     )
@@ -63,7 +78,7 @@ export default async function PhotoSearchPage() {
       </header>
 
       <PhotoSearch
-        allPhotos={allPhotos}
+        allPhotos={sortedPhotos}
         locations={locations}
         categories={categories}
         tags={tags}
