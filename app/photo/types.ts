@@ -39,6 +39,7 @@ export type GalleryTile = PhotoImage & {
   photoCount?: number;
   isBundle?: boolean;
   bundlePhotos?: (PhotoImage & { id: string; href: string })[];
+  bundleTitles?: string[];
 };
 
 export type Bundle = {

@@ -14,6 +14,51 @@ type PhotoSearchProps = {
   dates: string[];
 };
 
+function expandBundleTiles(photos: GalleryTile[]): GalleryTile[] {
+  const expanded = new Map<string, GalleryTile>();
+
+  for (const item of photos) {
+    if (!item.isBundle) {
+      const existing = expanded.get(item.href);
+      expanded.set(item.href, {
+        ...item,
+        bundleTitles: existing?.bundleTitles ?? item.bundleTitles,
+      });
+      continue;
+    }
+
+    const bundleTitle = item.title ?? "Bundle";
+    const bundleMembers = item.bundlePhotos ?? [];
+
+    if (bundleMembers.length === 0) {
+      expanded.set(item.href, item);
+      continue;
+    }
+
+    for (const member of bundleMembers) {
+      const existing = expanded.get(member.href);
+      if (!existing) {
+        expanded.set(member.href, {
+          ...member,
+          isBundle: false,
+          bundleTitles: [bundleTitle],
+        });
+        continue;
+      }
+
+      const bundleTitles = existing.bundleTitles ?? [];
+      if (!bundleTitles.includes(bundleTitle)) {
+        expanded.set(member.href, {
+          ...existing,
+          bundleTitles: [...bundleTitles, bundleTitle],
+        });
+      }
+    }
+  }
+
+  return Array.from(expanded.values());
+}
+
 export default function PhotoSearch({
   allPhotos,
   locations,
@@ -34,6 +79,13 @@ export default function PhotoSearch({
   const [openDropdown, setOpenDropdown] = useState<"location" | "category" | null>(null);
 
   const normalizedPhotos = useMemo(() => allPhotos, [allPhotos]);
+  const displaySource = useMemo(
+    () =>
+      layoutMode === "grid" || bundleMode === "photos"
+        ? expandBundleTiles(normalizedPhotos)
+        : normalizedPhotos,
+    [normalizedPhotos, layoutMode, bundleMode]
+  );
   const gridClassName =
     layoutMode === "grid"
       ? "grid gap-0 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6"
@@ -49,7 +101,7 @@ export default function PhotoSearch({
 
   const filteredPhotos = useMemo(
     () =>
-      filterPhotos(normalizedPhotos, {
+      filterPhotos(displaySource, {
         search,
         locations: selectedLocations.length > 0 ? selectedLocations : undefined,
         categories: selectedCategories.length > 0 ? selectedCategories : undefined,
@@ -58,74 +110,16 @@ export default function PhotoSearch({
         endDate: endDate || undefined,
         bundleMode,
       }),
-    [normalizedPhotos, search, selectedLocations, selectedCategories, selectedTags, startDate, endDate, bundleMode]
+      [displaySource, search, selectedLocations, selectedCategories, selectedTags, startDate, endDate, bundleMode]
   );
-  const displayPhotos = useMemo(() => {
-    if (layoutMode !== "grid") {
-      return filteredPhotos.map((photo) => ({
-        photo,
-        infoBundleTitles: [] as string[],
-      }));
-    }
-
-    const expanded = new Map<
-      string,
-      { photo: GalleryTile; infoBundleTitles: string[] }
-    >();
-
-    for (const item of filteredPhotos) {
-      if (item.isBundle) {
-        const bundleTitle = item.title ?? "Bundle";
-        const bundleMembers = item.bundlePhotos ?? [];
-
-        if (bundleMembers.length === 0) {
-          const fallbackKey = item.href;
-          const existingFallback = expanded.get(fallbackKey);
-          if (!existingFallback) {
-            expanded.set(fallbackKey, {
-              photo: item,
-              infoBundleTitles: [bundleTitle],
-            });
-          } else if (!existingFallback.infoBundleTitles.includes(bundleTitle)) {
-            existingFallback.infoBundleTitles.push(bundleTitle);
-          }
-          continue;
-        }
-
-        for (const member of bundleMembers) {
-          const key = member.href;
-          const existing = expanded.get(key);
-          if (!existing) {
-            expanded.set(key, {
-              photo: {
-                ...member,
-                isBundle: false,
-              },
-              infoBundleTitles: [bundleTitle],
-            });
-            continue;
-          }
-
-          if (!existing.infoBundleTitles.includes(bundleTitle)) {
-            existing.infoBundleTitles.push(bundleTitle);
-          }
-        }
-
-        continue;
-      }
-
-      const key = item.href;
-      const existing = expanded.get(key);
-      if (!existing) {
-        expanded.set(key, {
-          photo: item,
-          infoBundleTitles: [],
-        });
-      }
-    }
-
-    return Array.from(expanded.values());
-  }, [filteredPhotos, layoutMode]);
+  const displayPhotos = filteredPhotos.map((photo) => ({
+      photo,
+      infoBundleTitles: photo.bundleTitles ?? [],
+  }));
+  const totalDisplayCount =
+      bundleMode === "bundles"
+        ? normalizedPhotos.filter((photo) => photo.isBundle).length
+        : displaySource.length;
 
   const hasActiveFilters =
     search || selectedLocations.length > 0 || selectedCategories.length > 0 || selectedTags.length > 0 || startDate || endDate;
@@ -358,7 +352,7 @@ export default function PhotoSearch({
 
       {/* Results count */}
       <div className="text-sm text-muted-foreground">
-        {displayPhotos.length} of {normalizedPhotos.length} items
+        {displayPhotos.length} of {totalDisplayCount} items
       </div>
 
       {/* Photo Grid */}
