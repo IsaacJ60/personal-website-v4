@@ -48,6 +48,10 @@ export async function getAllPhotos(): Promise<GalleryTile[]> {
           peekSrcs,
           photoCount: Math.min(bundlePhotos.length, 4),
           isBundle: true,
+          bundlePhotos: bundlePhotos.map((photo) => ({
+            ...photo,
+            href: `/photo/photos/${photo.id}`,
+          })),
         });
 
         continue;

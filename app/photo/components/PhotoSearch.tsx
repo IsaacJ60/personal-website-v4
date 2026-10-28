@@ -30,13 +30,16 @@ export default function PhotoSearch({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [bundleMode, setBundleMode] = useState<"both" | "bundles" | "photos">("both");
-  const [layoutMode, setLayoutMode] = useState<"normal" | "compact">("normal");
+  const [layoutMode, setLayoutMode] = useState<"normal" | "compact" | "grid">("normal");
   const [openDropdown, setOpenDropdown] = useState<"location" | "category" | null>(null);
 
   const normalizedPhotos = useMemo(() => allPhotos, [allPhotos]);
-  const gridClassName = layoutMode === "compact" 
-    ? "grid gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8"
-    : "grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
+  const gridClassName =
+    layoutMode === "grid"
+      ? "grid gap-0 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6"
+      : layoutMode === "compact"
+        ? "grid gap-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8"
+        : "grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
   const controlBaseClass =
     "inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-3 text-sm font-medium text-neutral-700 shadow-sm transition-colors hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800";
   const activeSegmentClass =
@@ -57,6 +60,72 @@ export default function PhotoSearch({
       }),
     [normalizedPhotos, search, selectedLocations, selectedCategories, selectedTags, startDate, endDate, bundleMode]
   );
+  const displayPhotos = useMemo(() => {
+    if (layoutMode !== "grid") {
+      return filteredPhotos.map((photo) => ({
+        photo,
+        infoBundleTitles: [] as string[],
+      }));
+    }
+
+    const expanded = new Map<
+      string,
+      { photo: GalleryTile; infoBundleTitles: string[] }
+    >();
+
+    for (const item of filteredPhotos) {
+      if (item.isBundle) {
+        const bundleTitle = item.title ?? "Bundle";
+        const bundleMembers = item.bundlePhotos ?? [];
+
+        if (bundleMembers.length === 0) {
+          const fallbackKey = item.href;
+          const existingFallback = expanded.get(fallbackKey);
+          if (!existingFallback) {
+            expanded.set(fallbackKey, {
+              photo: item,
+              infoBundleTitles: [bundleTitle],
+            });
+          } else if (!existingFallback.infoBundleTitles.includes(bundleTitle)) {
+            existingFallback.infoBundleTitles.push(bundleTitle);
+          }
+          continue;
+        }
+
+        for (const member of bundleMembers) {
+          const key = member.href;
+          const existing = expanded.get(key);
+          if (!existing) {
+            expanded.set(key, {
+              photo: {
+                ...member,
+                isBundle: false,
+              },
+              infoBundleTitles: [bundleTitle],
+            });
+            continue;
+          }
+
+          if (!existing.infoBundleTitles.includes(bundleTitle)) {
+            existing.infoBundleTitles.push(bundleTitle);
+          }
+        }
+
+        continue;
+      }
+
+      const key = item.href;
+      const existing = expanded.get(key);
+      if (!existing) {
+        expanded.set(key, {
+          photo: item,
+          infoBundleTitles: [],
+        });
+      }
+    }
+
+    return Array.from(expanded.values());
+  }, [filteredPhotos, layoutMode]);
 
   const hasActiveFilters =
     search || selectedLocations.length > 0 || selectedCategories.length > 0 || selectedTags.length > 0 || startDate || endDate;
@@ -126,7 +195,7 @@ export default function PhotoSearch({
       <div className="flex flex-col gap-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950 sm:flex-row sm:flex-wrap sm:items-center">
         {/* Layout Toggle */}
         <div className="inline-flex h-9 w-full items-stretch rounded-md border border-neutral-300 bg-white p-1 text-xs font-medium shadow-sm dark:border-neutral-700 dark:bg-neutral-900 sm:w-auto">
-          {(["normal", "compact"] as const).map((mode) => (
+          {(["normal", "compact", "grid"] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setLayoutMode(mode)}
@@ -136,7 +205,7 @@ export default function PhotoSearch({
                   : inactiveSegmentClass
               }`}
             >
-              {mode === "normal" ? "Normal" : "Compact"}
+              {mode === "normal" ? "Normal" : mode === "compact" ? "Compact" : "Grid"}
             </button>
           ))}
         </div>
@@ -289,14 +358,26 @@ export default function PhotoSearch({
 
       {/* Results count */}
       <div className="text-sm text-muted-foreground">
-        {filteredPhotos.length} of {normalizedPhotos.length} items
+        {displayPhotos.length} of {normalizedPhotos.length} items
       </div>
 
       {/* Photo Grid */}
-      {filteredPhotos.length > 0 ? (
-        <div className={gridClassName}>
-          {filteredPhotos.map((photo) => (
-            <PhotoCard key={photo.href} image={photo} href={photo.href} badgeLabel={photo.badgeLabel} />
+      {displayPhotos.length > 0 ? (
+        <div
+          className={`${gridClassName} ${
+            layoutMode === "grid" ? "overflow-hidden rounded-2xl" : ""
+          }`}
+        >
+          {displayPhotos.map(({ photo, infoBundleTitles }) => (
+            <PhotoCard
+              key={photo.href}
+              image={photo}
+              href={photo.href}
+              badgeLabel={photo.badgeLabel}
+              compact={layoutMode === "compact"}
+              grid={layoutMode === "grid"}
+              infoBundleTitles={infoBundleTitles}
+            />
           ))}
         </div>
       ) : (
