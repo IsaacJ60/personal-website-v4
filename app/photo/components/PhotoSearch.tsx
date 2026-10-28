@@ -14,6 +14,9 @@ type PhotoSearchProps = {
   dates: string[];
 };
 
+const LAYOUT_MODE_STORAGE_KEY = "photo-gallery-layout-mode";
+const BUNDLE_MODE_STORAGE_KEY = "photo-gallery-bundle-mode";
+
 function expandBundleTiles(photos: GalleryTile[]): GalleryTile[] {
   const expanded = new Map<string, GalleryTile>();
 
@@ -76,7 +79,44 @@ export default function PhotoSearch({
   const [endDate, setEndDate] = useState("");
   const [bundleMode, setBundleMode] = useState<"both" | "bundles" | "photos">("both");
   const [layoutMode, setLayoutMode] = useState<"normal" | "compact" | "grid">("normal");
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<"location" | "category" | null>(null);
+
+  // Restore browser-only preferences after hydration.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const savedLayoutMode = window.localStorage.getItem(LAYOUT_MODE_STORAGE_KEY);
+    const savedBundleMode = window.localStorage.getItem(BUNDLE_MODE_STORAGE_KEY);
+
+    if (
+      savedLayoutMode === "normal" ||
+      savedLayoutMode === "compact" ||
+      savedLayoutMode === "grid"
+    ) {
+      setLayoutMode(savedLayoutMode);
+    }
+
+    if (
+      savedBundleMode === "both" ||
+      savedBundleMode === "photos" ||
+      savedBundleMode === "bundles"
+    ) {
+      setBundleMode(savedBundleMode);
+    }
+
+    setSettingsLoaded(true);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    window.localStorage.setItem(LAYOUT_MODE_STORAGE_KEY, layoutMode);
+  }, [layoutMode, settingsLoaded]);
+
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    window.localStorage.setItem(BUNDLE_MODE_STORAGE_KEY, bundleMode);
+  }, [bundleMode, settingsLoaded]);
 
   const normalizedPhotos = useMemo(() => allPhotos, [allPhotos]);
   const displaySource = useMemo(
