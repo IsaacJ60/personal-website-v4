@@ -38,6 +38,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Local database audit evidence (never application credentials or data backups)
+.supabase-local/
+supabase/.temp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

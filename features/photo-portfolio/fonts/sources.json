@@ -1,0 +1,50 @@
+[
+  {
+    "family": "Newsreader",
+    "file": "newsreader-latin.woff2",
+    "bytes": 58084,
+    "cssUrl": "https://fonts.googleapis.com/css2?family=Newsreader:wght@400..600&display=swap",
+    "url": "https://fonts.gstatic.com/s/newsreader/v26/cY9VfjOCX1hbuyalUrK49dLac06G1ZGsZBtoBAbNJYQ.woff2",
+    "licenseUrl": "https://raw.githubusercontent.com/google/fonts/main/ofl/newsreader/OFL.txt"
+  },
+  {
+    "family": "Instrument Sans",
+    "file": "instrumentsans-latin.woff2",
+    "bytes": 30092,
+    "cssUrl": "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..600&display=swap",
+    "url": "https://fonts.gstatic.com/s/instrumentsans/v4/pxiTypc9vsFDm051Uf6KVwgkfoSxQ0GsQv8ToedPibnr0SZe1Q.woff2",
+    "licenseUrl": "https://raw.githubusercontent.com/google/fonts/main/ofl/instrumentsans/OFL.txt"
+  },
+  {
+    "family": "Fraunces",
+    "file": "fraunces-latin.woff2",
+    "bytes": 36620,
+    "cssUrl": "https://fonts.googleapis.com/css2?family=Fraunces:wght@400..600&display=swap",
+    "url": "https://fonts.gstatic.com/s/fraunces/v38/6NUu8FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0K7iN7hzFUPJH58nib14c7qv8.woff2",
+    "licenseUrl": "https://raw.githubusercontent.com/google/fonts/main/ofl/fraunces/OFL.txt"
+  },
+  {
+    "family": "Manrope",
+    "file": "manrope-latin.woff2",
+    "bytes": 24532,
+    "cssUrl": "https://fonts.googleapis.com/css2?family=Manrope:wght@400..600&display=swap",
+    "url": "https://fonts.gstatic.com/s/manrope/v23/xn7gYHE41ni1AdIRggexSg.woff2",
+    "licenseUrl": "https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt"
+  },
+  {
+    "family": "Space Grotesk",
+    "file": "spacegrotesk-latin.woff2",
+    "bytes": 22288,
+    "cssUrl": "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..600&display=swap",
+    "url": "https://fonts.gstatic.com/s/spacegrotesk/v22/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2",
+    "licenseUrl": "https://raw.githubusercontent.com/google/fonts/main/ofl/spacegrotesk/OFL.txt"
+  },
+  {
+    "family": "IBM Plex Sans",
+    "file": "ibmplexsans-latin.woff2",
+    "bytes": 45712,
+    "cssUrl": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400..600&display=swap",
+    "url": "https://fonts.gstatic.com/s/ibmplexsans/v23/zYXzKVElMYYaJe8bpLHnCwDKr932-G7dytD-Dmu1syxeKYY.woff2",
+    "licenseUrl": "https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexsans/OFL.txt"
+  }
+]
