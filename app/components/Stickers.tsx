@@ -117,6 +117,7 @@ export function StickerPill({
         alt={label}
         width={24}
         height={24}
+        unoptimized
         className="object-contain"
       />
     </div>
