@@ -568,6 +568,25 @@ or new commerce/account system is required for this direction.
   optional? Do not let that toggle unexpectedly change the personal homepage theme.
 - What is the smallest editing interface that will make maintaining the site enjoyable?
 
+## 12. Future feature: photo sharing
+
+Status: backlog; not part of the current implementation.
+
+- Add a Share button to each photo.
+- Generate a polished, framed version of the selected photo with Isaac's watermark
+  embedded in the exported image. Preserve the photo's aspect ratio.
+- Let visitors download the generated image or copy it to their clipboard.
+- Make this watermarked sharing flow the only supported public copy/download path.
+  Keep unwatermarked full-resolution originals inaccessible through public image
+  URLs, page markup, and image delivery endpoints; serve appropriately sized display
+  images on the website instead. Disabling right-click alone cannot enforce this.
+- Browser-visible images can still be saved or captured in screenshots. The access
+  requirement is to protect full-resolution originals, not promise that displayed
+  photos cannot be copied.
+
+Before implementation, settle the frame design, watermark asset and placement,
+export resolution, and clipboard fallback for unsupported browsers.
+
 ## Research and verification notes
 
 Evidence includes source review, live schema/constraint/policy/function inspection,

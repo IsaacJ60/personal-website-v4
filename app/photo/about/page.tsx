@@ -1,14 +1,11 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import PortfolioPageHeader from "@/features/photo-portfolio/components/PortfolioPageHeader";
 import { portfolioProfile } from "@/features/photo-portfolio/data/profile";
 import styles from "@/features/photo-portfolio/portfolio.module.css";
+import { portfolioMetadata } from "@/features/photo-portfolio/lib/metadata";
 
-export const metadata: Metadata = {
-  title: "About / Contact",
-  description: "About Isaac Jiang and how to get in touch.",
-};
+export const metadata = portfolioMetadata("About / Contact", "About Isaac Jiang and how to get in touch.", "/photo/about");
 
 export default function AboutPage() {
   return <section aria-labelledby="about-title">

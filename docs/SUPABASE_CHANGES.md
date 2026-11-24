@@ -251,3 +251,31 @@ Remaining legacy advisor warnings were not mixed into these changes:
 
 The private snapshot's [RLS-without-policy notices](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy)
 are intentional: the backup should not have application access.
+
+## Deleted upload media cleanup — November 23, 2026
+
+Applied `20261123234314_add_photo_v2_media_cleanup.sql` to the photos project.
+An invoker trigger records a private cleanup task in the catalog deletion
+transaction only when the old object key matches that photo's new-upload path.
+The admin action removes both WebP derivatives through the Storage API, verifies
+that neither file remains, and then acknowledges the task. Failures retain the
+task for the Photos page's Retry image cleanup button (up to 25 tasks per retry).
+Imported/legacy media is never queued or removed by this flow.
+
+The storage DELETE policy requires the existing admin identity, the dedicated
+bucket, a matching queued UUID, one of the two supported derivative filenames,
+and no remaining catalog reference. The queue has RLS and no anonymous grants.
+Local policy tests cover stale deletion, transactional enqueue/rollback, active
+photo protection, derivative-only deletion, and unauthorized access. Four
+Storage API tests cover success, partial/silent failures, retry, and API errors.
+TypeScript and changed-file lint pass. Hosted metadata checks confirm the new
+trigger/policies, zero pending tasks, and no new feature-related advisor notices.
+No real photo or storage object was deleted during verification; signed-in
+deletion with Storage API cleanup remains an owner browser review.
+
+Follow-up: two real deletions removed their files but left cleanup tasks pending
+because `exists()` returns an error for a missing object. Completion now checks
+the UUID folder listing instead. Regression tests cover the missing-object error,
+partial removal, and listing failures. Cleared only those two tasks after hosted
+queries verified their photo records and both derivatives were absent; the queue
+then contained zero tasks. No additional image files were removed by this repair.

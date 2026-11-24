@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/photo/share/**": ["./public/photo-preview/*.webp"],
+  },
   async redirects() {
     return [
       { source: "/photo-preview", destination: "/photo", permanent: false },

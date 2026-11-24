@@ -1,28 +1,36 @@
 import { notFound } from "next/navigation";
 import { getPortfolio } from "@/features/photo-portfolio/data/catalog";
 import PortfolioViewer from "@/features/photo-portfolio/components/PortfolioViewer";
-import { archiveHref, archivePage, archivePageSize, filterArchive } from "@/features/photo-portfolio/lib/archive";
+import { photoViewerContext, type PortfolioSearch } from "@/features/photo-portfolio/lib/archive";
+import { portfolioMetadata } from "@/features/photo-portfolio/lib/metadata";
 
-export default async function PreviewPhoto({ params, searchParams }: {
+type Props = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+  searchParams: Promise<PortfolioSearch>;
+};
+
+async function getPhotoPage({ params, searchParams }: Props) {
   const [{ slug }, search] = await Promise.all([params, searchParams]);
   const { photos } = await getPortfolio();
-  const photo = photos.find((p) => p.slug === slug);
-  if (!photo) notFound();
-  if (search.from === "archive") {
-    const query = typeof search.q === "string" ? search.q : "";
-    const place = typeof search.place === "string" ? search.place : "";
-    const year = typeof search.year === "string" ? search.year : "";
-    const matches = filterArchive(photos, query, place, year);
-    const page = archivePage(typeof search.page === "string" ? search.page : null,
-      Math.max(1, Math.ceil(matches.length / archivePageSize)));
+  const context = photoViewerContext(photos, slug, search);
+  if (!context) notFound();
+  return context;
+}
+
+export async function generateMetadata(props: Props) {
+  const { active } = await getPhotoPage(props);
+  return portfolioMetadata(active.title, active.description?.trim() || `${active.title} — a photograph by Isaac Jiang.`,
+    `/photo/photos/${encodeURIComponent(active.slug)}`, true,
+    { path: `/photo/share/photos/${encodeURIComponent(active.slug)}`, alt: active.alt });
+}
+
+export default async function PreviewPhoto(props: Props) {
+  const { photo, sequence, fromArchive, archiveContext, backHref } = await getPhotoPage(props);
+  if (fromArchive) {
     return <PortfolioViewer title="Archive" description="" subtitle="From the photographic archive"
-      photos={matches.some((item) => item.id === photo.id) ? matches : [photo]}
+      photos={sequence}
       initialSlug={photo.slug} isDemo={false}
-      archiveContext={matches.some((item) => item.id === photo.id) ? { query, place, year } : undefined}
-      backHref={`${archiveHref(query, place, year, page)}#photo-${photo.slug}`} />;
+      archiveContext={archiveContext} backHref={backHref} />;
   }
   return <PortfolioViewer title={photo.title} description={photo.description || ""} photos={[photo]} isDemo={false} subtitle={null} />;
 }

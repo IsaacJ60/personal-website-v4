@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      photo_v2_media_cleanup: {
+        Row: { photo_id: string; created_at: string }
+        Insert: { photo_id: string; created_at?: string }
+        Update: { photo_id?: string; created_at?: string }
+        Relationships: []
+      }
       bundle_photos: {
         Row: {
           bundle_id: string

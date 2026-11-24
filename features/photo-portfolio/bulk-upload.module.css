@@ -1,0 +1,55 @@
+.editor { position: relative; min-width: 0; }
+.editor button { cursor: pointer; }
+.editor button:disabled { cursor: default; }
+.checkpoint { margin: 0 0 24px; max-width: 760px; color: var(--detail); font-size: 14px; line-height: 1.6; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.selectAll { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
+.selectAll span { color: var(--muted); }
+.editor input[type="checkbox"] { width: 17px; height: 17px; flex-shrink: 0; accent-color: var(--ink); }
+.editor .shared { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px 24px; max-width: none; margin: 0; padding: 18px; border: 1px solid var(--rule); border-radius: 4px; }
+.shared p { grid-column: 1 / -1; margin: 0; font-size: 14px; }
+.shared p small { display: block; margin-top: 4px; }
+.sharedField { display: flex; align-items: end; gap: 10px; min-width: 0; }
+.sharedField > :first-child { flex: 1; min-width: 0; }
+.sharedField button { flex-shrink: 0; }
+.notice { min-height: 20px; margin: 8px 0; font-size: 14px; color: var(--detail); }
+.queue { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--rule); }
+.item { padding: 20px 0; border-bottom: 1px solid var(--rule); }
+.row { display: grid; grid-template-columns: minmax(140px, .8fr) minmax(0, 3fr) 118px; gap: 20px; align-items: start; }
+.photo { display: grid; grid-template-columns: 18px 72px; align-items: center; gap: 10px; min-width: 0; }
+.editor .thumbnail { position: relative; width: 72px; height: 72px; padding: 0; overflow: hidden; display: grid; place-items: center; }
+.thumbnail img { object-fit: contain; }
+.editor .fields { grid-template-columns: minmax(0, 1.1fr) minmax(140px, .9fr) minmax(0, 1fr); max-width: none; margin: 0; gap: 14px; }
+.editor .fields label, .editor .shared label, .editor .extra label { font-size: 14px; }
+.fields input { min-width: 0; }
+.rowActions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.rowActions a, .error a { text-decoration: underline; text-underline-offset: 4px; font-size: 14px; }
+.status { font-size: 14px; color: var(--detail); }
+.editor .error, .status[data-error="true"] { color: var(--ink); font-size: 14px; }
+.editor .expand { margin-top: 14px; border: 0; padding: 4px 0; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--link-rule); }
+.editor .extra { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; margin: 16px 0 0; }
+.extra label { align-content: start; }
+.footer { position: sticky; bottom: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; padding: 18px 0; background: var(--paper); border-top: 1px solid var(--rule); font-size: 14px; color: var(--detail); }
+.preview { width: min(1000px, 92vw); max-height: 92dvh; padding: 20px; border: 1px solid var(--rule); border-radius: 4px; background: var(--paper); color: var(--ink); margin: auto; }
+.preview::backdrop { background: rgb(0 0 0 / 65%); }
+.previewHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 14px; }
+.previewHeader span { overflow-wrap: anywhere; min-width: 0; }
+.previewHeader button { flex-shrink: 0; }
+.previewImage { position: relative; height: 72dvh; margin-top: 16px; }
+.previewImage img { object-fit: contain; }
+@media (max-width: 1200px) {
+  .row { grid-template-columns: 110px minmax(0, 1fr); gap: 16px; }
+  .rowActions { grid-column: 2; flex-direction: row; align-items: center; justify-content: space-between; }
+  .editor .fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fields > :last-child { grid-column: 1 / -1; }
+  .editor .shared { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .row { grid-template-columns: minmax(0, 1fr); }
+  .rowActions { grid-column: auto; }
+  .editor .fields, .editor .extra { grid-template-columns: minmax(0, 1fr); }
+  .editor .fields input, .editor .extra textarea, .editor .shared input { font-size: 16px; }
+  .sharedField { flex-wrap: wrap; }
+  .sharedField > :first-child { flex-basis: 100%; }
+  .preview { padding: 12px; }
+}

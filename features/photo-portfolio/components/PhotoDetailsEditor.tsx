@@ -2,8 +2,9 @@
 
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ExternalLink } from "lucide-react";
-import { savePhotoDetails } from "@/app/photo/admin/photo-actions";
+import { deletePhoto, savePhotoDetails } from "@/app/photo/admin/photo-actions";
 import { useUnsavedChanges } from "../lib/use-unsaved-changes";
 import type { AdminPortfolioPhoto, PhotoDetails } from "../types";
 import PortfolioImage from "./PortfolioImage";
@@ -18,15 +19,19 @@ export default function PhotoDetailsEditor({ photo, initialDetails, initialRevis
   backHref: string;
   locations: string[];
 }) {
+  const router = useRouter();
   const [details, setDetails] = useState(initialDetails);
   const [saved, setSaved] = useState(initialDetails);
   const [revision, setRevision] = useState(initialRevision);
   const [published, setPublished] = useState(photo.published);
   const publishDialog = useRef<HTMLDialogElement>(null);
+  const deleteDialog = useRef<HTMLDialogElement>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleted, setDeleted] = useState(false);
   const [notice, setNotice] = useState<{ text: string; error?: boolean } | null>(null);
   const [pending, startTransition] = useTransition();
   const dirty = JSON.stringify(details) !== JSON.stringify(saved);
-  const guardNavigation = useUnsavedChanges(dirty, pending);
+  const guardNavigation = useUnsavedChanges(dirty && !deleted, pending);
   const publicHref = `/photo/photos/${encodeURIComponent(photo.slug)}`;
 
   function change(field: keyof PhotoDetails, value: string) {
@@ -56,6 +61,28 @@ export default function PhotoDetailsEditor({ photo, initialDetails, initialRevis
     });
   }
 
+  function remove() {
+    if (pending) return;
+    setNotice(null);
+    setDeleting(true);
+    startTransition(async () => {
+      try {
+        const result = await deletePhoto(photo.id, revision);
+        if (!result.ok) {
+          setNotice({ text: result.message, error: true });
+          return;
+        }
+        setDeleted(true);
+        deleteDialog.current?.close();
+        router.replace(backHref);
+      } catch {
+        setNotice({ text: "Couldn’t confirm deletion. Reload to check whether the photo was removed before trying again.", error: true });
+      } finally {
+        setDeleting(false);
+      }
+    });
+  }
+
   return <section className={`${styles.editor} ${styles.photoEditor}`} data-photo-editor>
     <form onSubmit={(event) => { event.preventDefault(); save(); }}>
       <header className={styles.header}>
@@ -67,6 +94,8 @@ export default function PhotoDetailsEditor({ photo, initialDetails, initialRevis
           </div>
         </div>
         <div className={styles.actions}>
+          <button type="button" className={styles.actionButton} disabled={pending || deleted}
+            onClick={() => { setNotice(null); deleteDialog.current?.showModal(); }}>Delete photo</button>
           {published && <>
             <Link className={styles.actionButton} onNavigate={guardNavigation} href={publicHref}>View photo</Link>
             <Link className={`${styles.actionButton} ${styles.openPhotoTab}`} href={publicHref}
@@ -82,7 +111,7 @@ export default function PhotoDetailsEditor({ photo, initialDetails, initialRevis
               }
             }}>{dirty ? "Save & publish" : "Publish photo"}</button>}
           <button className={`${styles.actionButton} ${styles.primary}`} disabled={!dirty || pending}>
-            {pending ? "Saving…" : "Save changes"}
+            {pending && !deleting ? "Saving…" : "Save changes"}
           </button>
         </div>
       </header>
@@ -103,6 +132,19 @@ export default function PhotoDetailsEditor({ photo, initialDetails, initialRevis
       {photo.uploaded && <PhotoPublishDialog dialog={publishDialog} title={details.title}
         label={dirty ? "Save & publish" : "Publish photo"} pending={pending}
         error={notice?.error ? notice.text : undefined} onPublish={() => save(true)} />}
+      <dialog ref={deleteDialog} className={styles.publishDialog} aria-labelledby="delete-photo-title"
+        onCancel={(event) => { if (pending) event.preventDefault(); }}>
+        <h2 id="delete-photo-title">Delete {saved.title}?</h2>
+        <p>This permanently removes the photo from the library, Archive, Selected Work, and every Series, including drafts. This cannot be undone.</p>
+        <p>{photo.uploaded ? "The uploaded display and thumbnail files will also be deleted. Failed file cleanup can be retried from Photos." : "Shared legacy image files and the legacy gallery are retained."}{dirty ? " Unsaved edits will be discarded." : ""}</p>
+        {notice?.error && <p role="alert">{notice.text}</p>}
+        <div className={styles.actions}>
+          <button type="button" className={styles.actionButton} disabled={pending} onClick={() => deleteDialog.current?.close()}>Cancel</button>
+          <button type="button" className={`${styles.actionButton} ${styles.primary}`} disabled={pending || deleted} onClick={remove}>
+            {deleting ? "Deleting…" : "Delete photo permanently"}
+          </button>
+        </div>
+      </dialog>
     </form>
   </section>;
 }

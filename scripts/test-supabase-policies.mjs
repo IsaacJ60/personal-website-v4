@@ -22,6 +22,7 @@ const seriesMigration = await readMigration('_save_photo_v2_series_draft.sql');
 const publishMigration = await readMigration('_publish_photo_v2_draft.sql');
 const managePublicationMigration = await readMigration('_manage_photo_v2_publications.sql');
 const uploadMediaMigration = await readMigration('_add_photo_v2_media_storage.sql');
+const mediaCleanupMigration = await readMigration('_add_photo_v2_media_cleanup.sql');
 const admin = '00000000-0000-4000-8000-000000000001';
 const otherUser = '00000000-0000-4000-8000-000000000002';
 const identifier = (value) => '"' + value.replaceAll('"', '""') + '"';
@@ -298,6 +299,22 @@ test('independent v2 catalog and private metadata snapshot', async (t) => {
       assert.deepEqual(await rows(db, 'photos'), sourceBefore.photos);
     });
 
+    await t.test('admin deletion rejects stale revisions, removes memberships and clears covers atomically', async () => {
+      await asRole(db, 'authenticated', admin, async () => {
+        const photo = (await db.query(`SELECT id,updated_at FROM public.photo_v2_photos WHERE slug='visible'`)).rows[0];
+        const before = (await db.query(`SELECT count(*)::int AS n FROM public.photo_v2_collection_photos WHERE photo_id=$1`, [photo.id])).rows[0].n;
+        assert.ok(before > 0);
+        await db.query(`UPDATE public.photo_v2_collections SET cover_photo_id=$1 WHERE slug='published'`, [photo.id]);
+        const stale = await db.query(`DELETE FROM public.photo_v2_photos WHERE id=$1 AND updated_at=$2::timestamptz - interval '1 second' RETURNING id`, [photo.id, photo.updated_at]);
+        assert.equal(stale.rows.length, 0);
+        assert.equal((await db.query(`SELECT count(*)::int AS n FROM public.photo_v2_collection_photos WHERE photo_id=$1`, [photo.id])).rows[0].n, before);
+        assert.equal((await db.query(`DELETE FROM public.photo_v2_photos WHERE id=$1 AND updated_at=$2 RETURNING id`, [photo.id, photo.updated_at])).rows.length, 1);
+        assert.equal((await db.query(`SELECT * FROM public.photo_v2_collection_photos WHERE photo_id=$1`, [photo.id])).rows.length, 0);
+        assert.equal((await db.query(`SELECT cover_photo_id FROM public.photo_v2_collections WHERE slug='published'`)).rows[0].cover_photo_id, null);
+        assert.deepEqual(await rows(db, 'photos'), sourceBefore.photos);
+      });
+    });
+
     await t.test('published collection members require a published photo too', async () => {
       await db.exec('BEGIN');
       try {
@@ -415,6 +432,37 @@ test('private upload derivatives follow the corresponding v2 photo visibility', 
       for (const [role, uid] of [['anon', null], ['authenticated', otherUser]]) {
         await asRole(db, role, uid, async () => { assert.deepEqual(await images(), [display, thumbnail]); });
       }
+    });
+    await db.exec(mediaCleanupMigration);
+    await t.test('cleanup is admin-only and cannot delete media still used by a photo', async () => {
+      await assert.rejects(asRole(db, 'anon', null, () => db.query('SELECT * FROM public.photo_v2_media_cleanup')), (error) => error.code === '42501');
+      await asRole(db, 'authenticated', otherUser, async () => {
+        assert.equal((await db.query('SELECT * FROM public.photo_v2_media_cleanup')).rows.length, 0);
+        assert.equal((await db.query('DELETE FROM storage.objects RETURNING name')).rows.length, 0);
+      });
+      await assert.rejects(asRole(db, 'authenticated', otherUser, () => db.query('INSERT INTO public.photo_v2_media_cleanup(photo_id) VALUES ($1)', [id])), (error) => error.code === '42501');
+      await asRole(db, 'authenticated', admin, async () => {
+        await db.query('INSERT INTO public.photo_v2_media_cleanup(photo_id) VALUES ($1)', [id]);
+        assert.equal((await db.query('DELETE FROM storage.objects RETURNING name')).rows.length, 0);
+      });
+    });
+    await t.test('deletion queues only uploaded files and authorizes just their two derivatives', async () => {
+      await asRole(db, 'authenticated', admin, async () => {
+        const revision = (await db.query('SELECT updated_at FROM public.photo_v2_photos WHERE id=$1', [id])).rows[0].updated_at;
+        assert.equal((await db.query(`DELETE FROM public.photo_v2_photos WHERE id=$1 AND updated_at=$2::timestamptz - interval '1 second' RETURNING id`, [id, revision])).rows.length, 0);
+        assert.equal((await db.query('SELECT * FROM public.photo_v2_media_cleanup')).rows.length, 0);
+        await db.query('DELETE FROM public.photo_v2_photos WHERE id=$1 AND updated_at=$2', [id, revision]);
+        assert.deepEqual((await db.query('SELECT photo_id FROM public.photo_v2_media_cleanup')).rows, [{ photo_id: id }]);
+        // Files remain until the separate Storage API request succeeds.
+        assert.ok((await images()).includes(display));
+        await db.exec("DELETE FROM public.photo_v2_photos WHERE slug='visible'");
+        assert.equal((await db.query('SELECT * FROM public.photo_v2_media_cleanup')).rows.length, 1);
+        assert.deepEqual((await db.query('DELETE FROM storage.objects RETURNING name')).rows.map((row) => row.name).sort(), [display, thumbnail]);
+        assert.deepEqual(await images(), [orphan]);
+      });
+      // Rolling back metadata deletion also rolls back the queued task.
+      assert.equal((await db.query('SELECT * FROM public.photo_v2_media_cleanup')).rows.length, 0);
+      assert.equal((await db.query('SELECT id FROM public.photo_v2_photos WHERE id=$1', [id])).rows.length, 1);
     });
   } finally { await db.close(); }
 });

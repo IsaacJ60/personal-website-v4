@@ -1,10 +1,162 @@
 # Photo preview: UI checkpoints
 
-## Future milestone — Bulk photo upload
+## Search and sharing — Checkpoint 3, November 23, 2026
 
-Add multiple-photo selection and drag and drop, a review queue for per-photo
-metadata, and progress and retry controls. Reuse the single-photo preparation,
-private draft storage, and publish flow.
+**All three local implementation checkpoints are ready for review.** Added native
+`/sitemap.xml` and `/robots.txt`. The sitemap uses the existing anonymous,
+published-only catalog, excluding code-defined demo Series and collection kinds
+without public detail routes. Entries include the homepage, four photo overview
+pages, every public photo, and real published Series; no admin, legacy, preview,
+share-image, redirect, filter/search, or slide-parameter URLs are listed.
+
+Photo and collection models now carry their database modification timestamps.
+The sitemap uses those dates where known and omits dates for static overview
+pages rather than inventing a new modification time on every request. It is
+force-dynamic; publication, unpublication, and deletion require no redeployment
+or separate sitemap cache invalidation. The served response uses max-age=0 and
+must-revalidate. Robots advertises the canonical sitemap and permits crawling,
+including public media/cards and pages whose existing noindex directives need
+to be read. Admin authentication and admin/legacy noindex settings are unchanged.
+
+Validation: four sitemap tests, TypeScript, and changed-file lint pass. Local
+XML matched an independent anonymous public-catalog query exactly: 294 unique
+URLs (288 photographs, one Series, five main pages), with 289 real modification
+dates. Robots, freshness headers, and representative homepage/overview/photo/
+Series responses and canonical URLs passed HTTP checks. No real publication
+state was changed for testing. Deployment and hosted crawler/link-unfurl checks
+remain the next release step; no deployment was performed in these checkpoints.
+
+## Search and sharing — Checkpoint 2, November 23, 2026
+
+**Stop for owner review of the sharing cards before sitemap work.** Public
+Open Graph and Twitter images now point to 1200 × 630 JPEG cards with a graphite
+background, uncropped photograph, and IJ.PRIME/title footer. Overview pages use
+a branded fallback; Selected Work uses its first photo; Series use their chosen
+cover or first photo; individual links use the photo displayed by the viewer.
+
+The public card route accepts only known card kinds and published catalog slugs.
+It reads prepared local derivatives or uses anonymous Storage access for new
+uploads. Legacy remote media is restricted to the configured CDN/camera path
+with bounded downloads. Missing/unpublished slugs return 404; temporary image
+failures return a branded card. Responses are no-store so removed photos aren't
+kept in this endpoint's cache. Prepared assets are explicitly included in its
+production file trace. No schema changes, dependencies, new external image
+service, deployment, or sitemap changes.
+
+Validation: nine focused metadata/render tests pass, including portrait top/bottom
+and landscape left/right edge preservation, JPEG dimensions, text escaping, and
+matching OG/Twitter URLs and alt text. TypeScript passes. Local crawler requests
+returned valid cards for the default, Selected Work, portrait, landscape, and
+Series; actual rendered portrait/default examples were visually inspected.
+Archive photo selection points to the matching card; unavailable/invalid card
+paths return 404. Hosted link-unfurl behavior remains a post-deployment check.
+
+## Search and sharing — Checkpoint 1, November 23, 2026
+
+**Stop for owner review before sharing cards or sitemap work.** Public photo
+routes now have explicit titles, descriptions, absolute canonical URLs, and
+matching Open Graph/Twitter text through a small shared metadata helper. The
+existing `/og.jpg` is retained until the visual sharing-card checkpoint.
+
+- Selected Work, Series, Archive, and About have their own metadata. Photos use
+  their title and caption, with an author description when no caption exists.
+  Series use their published title/description; demo Series are noindex.
+- Photo-page rendering and metadata share the same Archive sequence resolution.
+  A valid `?photo=` selection canonicalizes to the displayed photo's permanent
+  URL; missing/out-of-sequence selections follow the viewer's actual fallback.
+- Archive pagination has distinct clamped canonical URLs. Filter/search results
+  are noindex with normalized self-canonicals. Tracking parameters are omitted.
+  Series and Selected Work retain collection canonicals during slide navigation.
+- Existing admin and legacy noindex layouts remain unchanged. No authentication,
+  database changes, URL migrations, preview-image generation, or deployment.
+
+Validation: six targeted metadata/viewer tests, TypeScript, and changed-file lint
+pass. Local Twitterbot HTML checks verified all four overview pages, Archive
+page two, filtered Archive noindex, admin login noindex, matching direct/shared
+photo titles/canonicals, and stable Series canonicals with a slide parameter.
+Examples: Selected Work — IJ.PRIME; Blue Flower 9 — IJ.PRIME;
+Archive — Page 2 — IJ.PRIME. Next: photography-specific sharing-card review.
+
+## Bulk photo upload
+
+### Checkpoint 3 — Batch publishing, November 23, 2026
+
+**Stop for owner review at `/photo/admin/photos/bulk`.** Photos now links directly
+to the batch uploader; the single-photo uploader remains linked from that page.
+
+- Publish photos confirms the number of eligible photos becoming public. New
+  uploads save privately first, then publish. Existing saved drafts publish
+  without sending image bytes again. Preparation errors are excluded; missing
+  required fields block the requested batch on confirmation without inline hints.
+- Queue entries preserve separate saved-file and publication state. Publication
+  failures retain the saved draft, UUID, and intended operation. Retry failed
+  confirms any publications again and skips successful photos.
+- Compact results show Published · View, with public links opening in a new tab.
+  Draft results retain Saved · Edit. Footer counts drafts, publications, and failures.
+- The new admin-only publish endpoint checks the origin, UUID, upload identity,
+  reviewed metadata, and both derivatives. It changes only publication state,
+  uses an optimistic revision check, and returns already-published photos safely
+  after a lost response. It does not alter edited metadata or recreate deleted photos.
+- Authentication pauses processing; retry retains publication intent. No schema
+  changes or real photo publications were performed during implementation.
+
+Verification: ten focused HTTP queue tests pass, covering drafts, new/saved
+publication, partial failure, lost responses, authentication pause, and cancellation.
+TypeScript and changed-file lint pass. The local publish endpoint returns HTTP
+401 to a signed-out empty request. Signed-in save → publish → public-view behavior remains owner
+review; the tests use mocked HTTP responses rather than live photo publications.
+
+### Checkpoint 2 — Save drafts and retry, November 23, 2026
+
+**Stop for owner review at `/photo/admin/photos/bulk`.** Checkpoint 1 was reviewed
+and approved, including compact rows, filename tooltips, one details toggle, and
+backdrop dismissal of the preview. Inline missing-field hints were removed.
+
+- Save drafts validates the prepared batch on click, then sends one photo at a
+  time through the existing upload endpoint with `mode=draft`. Invalid required
+  fields block the batch with a single message before any request is sent.
+- The footer shows current position and saved/failed/ready counts. Failed photos
+  retain their data; Retry failed skips successes. Save drafts resumes both new
+  and failed items. Preparation errors remain removable and do not block valid
+  prepared photos.
+- Submitted metadata is locked. Retries reuse the same UUID, prepared image, and
+  metadata so an ambiguous response can resolve through endpoint idempotency.
+  Saved rows link to their metadata editor and remain visible in the results.
+- Authentication failures pause the batch. A new-tab login link preserves this
+  page's queue. Unmount aborts the client request and stops further requests;
+  saved server records remain saved. Queue state does not survive a reload.
+- No schema, policies, storage settings, upload endpoint, or public visibility
+  changes. Publishing remains the next milestone after review.
+
+Verification: TypeScript and changed-file lint pass. Five focused tests with
+mocked HTTP responses cover sequential/partial success, lost-response retry
+identity, authentication pause, malformed responses, and unmount cancellation.
+These do not exercise live storage or the signed-in browser flow. Owner review
+should save a small batch, check its drafts in Photos, and exercise retry after
+a network interruption before proceeding to batch publishing.
+
+### Checkpoint 1 — Batch review UI, November 23, 2026
+
+**Stop for owner review at `/photo/admin/photos/bulk`.** The single-photo upload
+page links to this checkpoint and remains available at `/photo/admin/photos/new`.
+
+- Multiple selection/drop appends to a local queue. Images prepare sequentially
+  with the existing WebP/EXIF helper; individual failures do not stop the queue.
+- All titles, dates, and locations are editable together, with independent
+  caption/alt-text expansions and Expand all / Collapse all controls.
+- Select photos to explicitly apply a shared date or location. Desktop rows
+  become stacked cards on mobile; thumbnails open a larger native-dialog preview.
+- Unsaved navigation warnings and object-URL cleanup cover the local queue.
+- Review only: no upload requests or saving/publishing controls in this checkpoint.
+  Closing/reloading the page loses the queue. Existing single-photo saving remains
+  unchanged.
+
+Verification: changed-file lint passes. The local route redirects signed-out
+visitors to admin login. The verification browser has no admin session, so the
+populated desktop/mobile queue and interactions still need owner browser review.
+
+Next, after review: sequential upload processing, progress, partial-failure
+retries with stable photo IDs, then publishing confirmation and final results.
 
 ## Launch rehearsal — November 23, 2026
 

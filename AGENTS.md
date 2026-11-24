@@ -1,0 +1,3 @@
+- Lint a changed file: `npm run lint -- --quiet <file>`
+- Typecheck: `npx --no-install tsc --noEmit --pretty false`
+- Database policy tests: `npm run test:db`

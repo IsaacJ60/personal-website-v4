@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import SeriesCard from "@/features/photo-portfolio/components/SeriesCard";
 import PortfolioPageHeader from "@/features/photo-portfolio/components/PortfolioPageHeader";
 import { getPortfolio } from "@/features/photo-portfolio/data/catalog";
 import styles from "@/features/photo-portfolio/portfolio.module.css";
+import { portfolioMetadata } from "@/features/photo-portfolio/lib/metadata";
 
-export const metadata: Metadata = { title: "Series" };
+export const metadata = portfolioMetadata("Series", "Photographic series and sequences by Isaac Jiang.", "/photo/series");
 
 export default async function SeriesPage() {
   const { collections } = await getPortfolio();

@@ -12,6 +12,7 @@ export type PortfolioPhoto = {
   description: string | null;
   location: string | null;
   date: string;
+  updatedAt?: string;
   categories: string[];
   src: string;
   thumbnail?: string;
@@ -29,6 +30,7 @@ export type PortfolioCollection = {
   kind: "selected" | "series" | "notebook";
   photos: PortfolioPhoto[];
   isDemo: boolean;
+  updatedAt?: string;
   coverPhotoId?: string | null;
 };
 

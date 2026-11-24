@@ -19,7 +19,7 @@ export function mapPhoto(row: PhotoRow): PortfolioPhoto {
   return {
     id: row.id, slug: row.slug, title: row.title, alt: row.alt_text || row.title,
     description: row.description?.trim().toLowerCase() === row.title.trim().toLowerCase() ? null : row.description,
-    location: row.location, date: row.date_taken, categories: row.categories,
+    location: row.location, date: row.date_taken, updatedAt: row.updated_at, categories: row.categories,
     src: uploaded ? uploadedPhotoSrc(row.id, "display", row.published)
       : local?.src ?? `${mediaBase}/camera/${row.object_key.split("/").map(encodeURIComponent).join("/")}`,
     thumbnail: uploaded ? uploadedPhotoSrc(row.id, "thumbnail", row.published) : local?.thumbnail,
@@ -52,7 +52,7 @@ export const getPortfolio = cache(async () => {
   }
   // Read each collection and its sequence in the same snapshot when a public edit is replaced.
   const { data: rows, error } = await client.from("photo_v2_collections")
-    .select("id,slug,title,description,kind,cover_photo_id,photo_v2_collection_photos(photo_id,position)")
+    .select("id,slug,title,description,kind,cover_photo_id,updated_at,photo_v2_collection_photos(photo_id,position)")
     .eq("published", true).order("sort_order").order("id");
   if (error) throw new Error(`Could not load published portfolio edits: ${error.message}`);
   const byId = new Map(photos.map((photo) => [photo.id, photo]));
@@ -61,6 +61,7 @@ export const getPortfolio = cache(async () => {
     if (!["selected", "series", "notebook"].includes(row.kind)) continue;
     collections.push({ id: row.id, slug: row.slug, title: row.title,
       description: row.description || "", kind: row.kind as PortfolioCollection["kind"], isDemo: false,
+      updatedAt: row.updated_at,
       coverPhotoId: row.cover_photo_id,
       photos: row.photo_v2_collection_photos.sort((a, b) => a.position - b.position)
         .flatMap((member) => byId.get(member.photo_id) ?? []),

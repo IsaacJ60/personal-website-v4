@@ -123,6 +123,7 @@ export default function UploadPhotoForm({ locations }: { locations: string[] }) 
       </header>
       <div className={styles.draftBar}>
         <Link className={styles.textLink} href={adminPhotosPath} onNavigate={guardNavigation}>← Photos</Link>
+        <Link className={styles.textLink} href={`${adminPhotosPath}/bulk`} onNavigate={guardNavigation}>Upload multiple photos</Link>
         <span role={error ? "alert" : "status"}>{error || (preparing ? "Preparing photo…" : "")}</span>
         {existingDraft && <Link className={styles.textLink} href={`${adminPhotosPath}/${existingDraft}`}>Open saved draft</Link>}
       </div>
