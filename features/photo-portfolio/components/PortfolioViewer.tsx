@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Grid2X2, Maximize2, Minimize2, PanelBottom } from "lucide-react";
 import type { PortfolioCollection } from "../types";
@@ -32,6 +32,7 @@ export default function PortfolioViewer({ title, description, photos, isDemo, in
   const [fullscreen, setFullscreen] = useState(false);
   const [fullscreenError, setFullscreenError] = useState("");
   const stage = useRef<HTMLDivElement>(null);
+  const swipe = useRef<{ x: number; y: number; slug: string } | null>(null);
 
   const navigate = useCallback((target: number) => {
     if (target < 0 || target >= photos.length) return;
@@ -41,6 +42,33 @@ export default function PortfolioViewer({ title, description, photos, isDemo, in
     // sequence does not refetch the whole catalog on every key press.
     window.history.pushState(null, "", `${pathname}?${query}`);
   }, [params, pathname, photos]);
+
+  function startSwipe(event: TouchEvent<HTMLDivElement>) {
+    swipe.current = event.touches.length === 1
+      ? { x: event.touches[0].clientX, y: event.touches[0].clientY, slug: photo.slug }
+      : null;
+  }
+
+  function moveSwipe(event: TouchEvent<HTMLDivElement>) {
+    const start = swipe.current;
+    if (!start) return;
+    if (event.touches.length !== 1) { swipe.current = null; return; }
+    const dx = Math.abs(event.touches[0].clientX - start.x);
+    const dy = Math.abs(event.touches[0].clientY - start.y);
+    // Once a gesture becomes a vertical scroll, it must not change photos.
+    if (dy > 10 && dy > dx) swipe.current = null;
+  }
+
+  function endSwipe(event: TouchEvent<HTMLDivElement>) {
+    const start = swipe.current;
+    swipe.current = null;
+    if (!start || start.slug !== photo.slug || event.touches.length !== 0 || event.changedTouches.length !== 1) return;
+    const dx = event.changedTouches[0].clientX - start.x;
+    const dy = event.changedTouches[0].clientY - start.y;
+    if (Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      navigate(index + (dx < 0 ? 1 : -1));
+    }
+  }
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -98,7 +126,9 @@ export default function PortfolioViewer({ title, description, photos, isDemo, in
       ) : (
         <>
           <div className={styles.stage} ref={stage} tabIndex={-1}>
-            <div className={styles.stageMain} key={photo.id}>
+            <div className={styles.stageMain} key={photo.id}
+              onTouchStart={startSwipe} onTouchMove={moveSwipe} onTouchEnd={endSwipe}
+              onTouchCancel={() => { swipe.current = null; }}>
               <PortfolioImage photo={photo} eager />
             </div>
             {fullscreen && <button className={styles.fullscreenExit} onClick={toggleFullscreen} type="button" aria-label="Exit fullscreen"><Minimize2 size={20} /></button>}

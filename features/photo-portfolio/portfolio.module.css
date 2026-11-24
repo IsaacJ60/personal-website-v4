@@ -151,7 +151,7 @@
 .control { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; padding: 0 4px; min-height: 36px; background: transparent; color: var(--muted); font-size: 12px !important; line-height: 1.5; white-space: nowrap; }
 .control:hover, .control[aria-pressed="true"] { color: var(--ink); }
 .stage { display: flex; gap: 18px; position: relative; height: calc(100dvh - 266px); min-height: 350px; max-height: 1100px; outline: none; }
-.stageMain { position: relative; flex: 1; min-width: 0; height: 100%; background: var(--paper); }
+.stageMain { position: relative; flex: 1; min-width: 0; height: 100%; background: var(--paper); touch-action: pan-y pinch-zoom; }
 .photoImage { object-fit: contain; }
 .stage:fullscreen { height: 100dvh; max-height: none; background: #111; padding: 28px; }
 .stage:fullscreen .stageMain { background: #111; }
