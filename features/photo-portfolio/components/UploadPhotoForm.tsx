@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ImagePlus } from "lucide-react";
 import { adminPhotosPath, photoDetailsLimits } from "../lib/admin-photos";
 import { prepareLocalPhoto } from "../lib/prepare-upload.client";
+import { uploadPhotoOriginal } from "../lib/upload-original.client";
 import { usePhotoDrop } from "../lib/use-photo-drop";
 import { useUnsavedChanges } from "../lib/use-unsaved-changes";
 import type { PhotoDetails } from "../types";
@@ -22,7 +23,7 @@ export default function UploadPhotoForm({ locations }: { locations: string[] }) 
   const section = useRef<HTMLElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const publishDialog = useRef<HTMLDialogElement>(null);
-  const [preview, setPreview] = useState<{ id: string; image: Blob; url: string; filename: string } | null>(null);
+  const [preview, setPreview] = useState<{ id: string; image: Blob; original: File; url: string; filename: string } | null>(null);
   const [details, setDetails] = useState(emptyDetails);
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState("");
@@ -48,7 +49,7 @@ export default function UploadPhotoForm({ locations }: { locations: string[] }) 
       const title = file.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim().slice(0, photoDetailsLimits.title);
       const id = crypto.randomUUID();
       setDetails({ ...emptyDetails, title, date });
-      setPreview({ id, image, url: URL.createObjectURL(image), filename: file.name });
+      setPreview({ id, image, original: file, url: URL.createObjectURL(image), filename: file.name });
     } catch (cause) {
       if (version === request.current) setError(cause instanceof Error ? cause.message : "Couldn’t prepare this photo.");
     } finally {
@@ -73,10 +74,12 @@ export default function UploadPhotoForm({ locations }: { locations: string[] }) 
     setExistingDraft(null);
     startTransition(async () => {
       try {
+        const originalSha256 = await uploadPhotoOriginal(preview.id, preview.original);
         const form = new FormData();
         form.set("id", preview.id);
         form.set("mode", mode);
         form.set("image", preview.image, "display.webp");
+        form.set("originalSha256", originalSha256);
         for (const [key, value] of Object.entries(details)) form.set(key, value);
         const response = await fetch("/api/photo-preview/upload", { method: "POST", body: form });
         const result = await response.json();
@@ -94,8 +97,8 @@ export default function UploadPhotoForm({ locations }: { locations: string[] }) 
         } else {
           router.replace(`${adminPhotosPath}/${preview.id}`);
         }
-      } catch {
-        setError("Couldn’t save this photo. Your selected photo and details are still here.");
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Couldn’t save this photo. Your selected photo and details are still here.");
       }
     });
   }

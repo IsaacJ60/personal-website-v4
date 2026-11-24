@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Grid2X2, Maximize2, Minimize2, PanelBottom } from "lucide-react";
 import type { PortfolioCollection } from "../types";
 import PortfolioImage from "./PortfolioImage";
+import PhotoShare from "./PhotoShare";
 import styles from "../portfolio.module.css";
 import { archiveHref, archivePageSize } from "../lib/archive";
 
@@ -111,6 +112,7 @@ export default function PortfolioViewer({ title, description, photos, isDemo, in
               <button type="button" className={styles.iconButton} aria-label="Next photograph" disabled={index === photos.length - 1} onClick={() => navigate(index + 1)}><ChevronRight size={20} strokeWidth={1.3} /></button>
             </div>
             <div className={styles.viewerTools}>
+              <PhotoShare key={photo.id} photo={photo} />
               <button type="button" className={styles.control} aria-expanded={captions} aria-controls="photo-details" onClick={() => setCaptions(!captions)}><PanelBottom size={15} strokeWidth={1.4} />Details</button>
               <button type="button" className={styles.control} aria-label="Fullscreen" onClick={toggleFullscreen}><Maximize2 size={15} strokeWidth={1.4} aria-hidden="true" /><span className={styles.fullscreenLabel}>Fullscreen</span></button>
             </div>

@@ -570,7 +570,8 @@ or new commerce/account system is required for this direction.
 
 ## 12. Future feature: photo sharing
 
-Status: backlog; not part of the current implementation.
+Status: planned; not yet implemented. See [the implementation plan and manual
+review milestones](PHOTO_SHARING_PLAN.md).
 
 - Add a Share button to each photo.
 - Generate a polished, framed version of the selected photo with Isaac's watermark

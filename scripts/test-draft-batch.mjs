@@ -1,8 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { savePhotoBatch as saveDraftBatch } from '../features/photo-portfolio/lib/save-draft-batch.ts';
+import { registerHooks } from 'node:module';
+// Node's type stripping needs a resolver for app-style extensionless TS imports.
+registerHooks({ resolve(specifier, context, next) {
+  if (specifier === './upload-original.client' && context.parentURL?.endsWith('/save-draft-batch.ts')) {
+    return { url: `data:text/javascript,${encodeURIComponent("export async function uploadPhotoOriginal(id, file) { if (file.name === 'fail.jpg') throw new Error('Original upload failed'); return 'a'.repeat(64); }")}`, shortCircuit: true };
+  }
+  try { return next(specifier, context); } catch (error) {
+    if (error.code === 'ERR_MODULE_NOT_FOUND' && specifier.startsWith('.')) return next(`${specifier}.ts`, context);
+    throw error;
+  }
+} });
+const { savePhotoBatch: saveDraftBatch } = await import('../features/photo-portfolio/lib/save-draft-batch.ts');
 
-const photo = (id) => ({ id, image: new Blob(['same-image'], { type: 'image/webp' }),
+const photo = (id) => ({ id, image: new Blob(['same-image'], { type: 'image/webp' }), original: new File(['original-image'], 'original.jpg', { type: 'image/jpeg' }),
   details: { title: id, date: '2026-11-23', location: '', caption: '', altText: '' } });
 const success = (id, published = false) => Response.json({ id, slug: `photo-${id}`, published });
 function observer(signal = new AbortController().signal) {
@@ -164,4 +175,16 @@ test('authentication expiry during publication retains the upload and pauses rem
   assert.deepEqual(uploaded, ['a']);
   assert.equal(calls.length, 2);
   assert.equal(options.events.at(-1)[1], 'a');
+});
+
+test('missing or failed original uploads never submit derivative metadata', async t => {
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async url => { calls.push(url); return success('a'); });
+  const missing = observer();
+  await saveDraftBatch([{ ...photo('a'), original: undefined }], missing);
+  assert.equal(missing.events.at(-1)[0], 'failed');
+  const failed = observer();
+  await saveDraftBatch([{ ...photo('b'), mode: 'publish', original: new File(['source'], 'fail.jpg') }], failed);
+  assert.deepEqual(failed.events.at(-1), ['failed', 'b', 'Original upload failed']);
+  assert.deepEqual(calls, []);
 });

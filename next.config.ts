@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/photo/share/**": ["./public/photo-preview/*.webp", "./features/photo-portfolio/fonts/instrumentsans-share.ttf"],
+    "/api/photo-sharing/**": ["./features/photo-portfolio/fonts/instrumentsans-share.ttf"],
   },
   async redirects() {
     return [

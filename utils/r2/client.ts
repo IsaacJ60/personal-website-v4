@@ -6,6 +6,9 @@ const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY!;
 
 export const r2Client = new S3Client({
   region: "auto",
+  // Presigned PUTs have no body at signing time. Avoid signing the optional
+  // checksum of an empty body when the browser will upload the actual file.
+  requestChecksumCalculation: "WHEN_REQUIRED",
   endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
     accessKeyId: R2_ACCESS_KEY_ID,

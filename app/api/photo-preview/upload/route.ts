@@ -3,6 +3,8 @@ import { getPortfolioAdminClient, portfolioUuid } from "@/features/photo-portfol
 import { normalizePhotoDetails } from "@/features/photo-portfolio/lib/admin-photos";
 import { prepareUploadedWebp } from "@/features/photo-portfolio/lib/prepare-upload.server";
 import { photoMediaBucket, uploadedPhotoKey, uploadMaxBytes } from "@/features/photo-portfolio/lib/upload-media";
+import { findUploadedOriginal } from "@/features/photo-portfolio/lib/original-storage.server";
+import { normalizeOriginalDetails } from "@/features/photo-portfolio/lib/original-storage";
 
 export const runtime = "nodejs";
 
@@ -59,6 +61,15 @@ export async function POST(request: Request) {
   if (existing.data) return existing.data.object_key === displayKey
     ? complete(existing.data, 200)
     : fail("Choose the file again to start a new upload.", 409);
+
+  // Never commit a new photo if its untouched original has not reached private R2.
+  const sha256 = field("originalSha256");
+  if (!/^[a-f0-9]{64}$/.test(sha256)) return fail("Store the original photo before saving. Choose the file again.", 400);
+  try {
+    const original = await findUploadedOriginal(id);
+    const saved = normalizeOriginalDetails({ size: original?.ContentLength, contentType: original?.ContentType, sha256: original?.Metadata?.sha256 });
+    if (!saved || saved.sha256 !== sha256) return fail("The original upload is incomplete. Retry saving this photo.", 409);
+  } catch { return fail("Couldn’t verify the original. Your photo is not saved yet; retry saving.", 503); }
 
   const images = await prepareUploadedWebp(file);
   if (!images) return fail("Couldn’t read the prepared image. Choose a JPEG, PNG, or WebP and try again.", 400);

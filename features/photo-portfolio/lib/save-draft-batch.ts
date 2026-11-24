@@ -1,7 +1,8 @@
 import type { PhotoDetails } from "../types";
+import { uploadPhotoOriginal } from "./upload-original.client";
 
 type PhotoResult = { id: string; slug: string; published: boolean };
-type DraftUpload = { id: string; image?: Blob; details: PhotoDetails; stored?: boolean; mode?: "draft" | "publish"; slug?: string; published?: boolean };
+type DraftUpload = { id: string; image?: Blob; original?: File; details: PhotoDetails; stored?: boolean; mode?: "draft" | "publish"; slug?: string; published?: boolean };
 
 // Each item is an independent, retryable request to the existing upload endpoint.
 export async function savePhotoBatch(items: DraftUpload[], options: {
@@ -15,15 +16,20 @@ export async function savePhotoBatch(items: DraftUpload[], options: {
   for (const [index, item] of items.entries()) {
     if (options.signal.aborted) break;
     const mode = item.mode ?? "draft";
+    let preparingOriginal = !item.stored;
     options.onStart(item.id, index + 1, mode);
     try {
       let photo: PhotoResult = { id: item.id, slug: item.slug ?? "", published: item.published ?? false };
       if (!item.stored) {
         if (!item.image) throw new Error("Missing prepared photo");
+        if (!item.original) throw new Error("Missing original photo. Choose the file again before saving.");
+        const originalSha256 = await uploadPhotoOriginal(item.id, item.original, options.signal);
+        preparingOriginal = false;
         const form = new FormData();
         form.set("id", item.id);
         form.set("mode", "draft");
         form.set("image", item.image, "display.webp");
+        form.set("originalSha256", originalSha256);
         for (const [key, value] of Object.entries(item.details)) form.set(key, value);
         const response = await fetch("/api/photo-preview/upload", { method: "POST", body: form, signal: options.signal });
         if (response.status === 401 || response.status === 403) {
@@ -55,8 +61,17 @@ export async function savePhotoBatch(items: DraftUpload[], options: {
         photo = result;
       }
       options.onSaved(item.id, photo);
-    } catch {
+    } catch (cause) {
       if (options.signal.aborted) break;
+      if (cause instanceof Error && cause.name === "UploadAuthenticationRequired") {
+        authenticationRequired = true;
+        options.onFailed(item.id, "Sign in again, then retry this photo.");
+        break;
+      }
+      if (preparingOriginal && cause instanceof Error && !(cause instanceof TypeError)) {
+        options.onFailed(item.id, cause.message);
+        continue;
+      }
       options.onFailed(item.id, `Couldn’t confirm ${mode === "publish" ? "publication" : "the save"}. Your photo and details are kept here; retry to check or finish.`);
     }
   }

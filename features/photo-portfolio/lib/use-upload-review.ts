@@ -19,6 +19,7 @@ export type UploadReviewItem = {
   intent?: "draft" | "publish";
   attempted?: boolean;
   image?: Blob;
+  original?: File;
   url?: string;
   error?: string;
 };
@@ -62,7 +63,7 @@ export function useUploadReview() {
           const url = URL.createObjectURL(image);
           urls.current.set(id, url);
           setItems((current) => current.map((item) => item.id === id
-            ? { ...item, image, url, status: "ready", details: { ...item.details, date: item.details.date || date } } : item));
+            ? { ...item, image, original: file, url, status: "ready", details: { ...item.details, date: item.details.date || date } } : item));
         } catch (cause) {
           if (!live.current.has(id)) continue;
           const error = cause instanceof Error ? cause.message : "Couldn’t prepare this photo. Remove it and choose another file.";
@@ -115,7 +116,7 @@ export function useUploadReview() {
     setAuthenticationRequired(false);
     setProgress({ position: 0, total: candidates.length, mode: mode === "publish" ? "publish" : "draft" });
     try {
-      const result = await savePhotoBatch(candidates.map((item) => ({ id: item.id, image: item.image, stored: item.stored, slug: item.slug,
+      const result = await savePhotoBatch(candidates.map((item) => ({ id: item.id, image: item.image, original: item.original, stored: item.stored, slug: item.slug,
         published: item.published, mode: mode === "retry" ? item.intent : mode, details: { ...item.details } })), {
         signal: controller.signal,
         onStart: (id, position, intent) => {
@@ -124,12 +125,12 @@ export function useUploadReview() {
         },
         onUploaded: (id, photo) => {
           if (!live.current.has(id)) return;
-          setItems((current) => current.map((item) => item.id === id ? { ...item, stored: true, slug: photo.slug, published: photo.published, image: undefined } : item));
+          setItems((current) => current.map((item) => item.id === id ? { ...item, stored: true, slug: photo.slug, published: photo.published, image: undefined, original: undefined } : item));
         },
         onSaved: (id, photo) => {
           if (!live.current.has(id)) return;
           setItems((current) => current.map((item) => item.id === id
-            ? { ...item, stored: true, published: photo.published, slug: photo.slug, status: photo.published ? "published" : "saved", image: undefined } : item));
+            ? { ...item, stored: true, published: photo.published, slug: photo.slug, status: photo.published ? "published" : "saved", image: undefined, original: undefined } : item));
         },
         onFailed: (id, error) => {
           if (!live.current.has(id)) return;
