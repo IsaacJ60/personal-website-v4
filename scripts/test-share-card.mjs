@@ -9,6 +9,16 @@ test('the branded fallback is a landscape JPEG and safely renders special charac
   assert.equal(metadata.format, 'jpeg');
   assert.equal(metadata.width, 1200);
   assert.equal(metadata.height, 630);
+  const { data, info } = await sharp(bytes).raw().toBuffer({ resolveWithObject: true });
+  const brightPixels = (left, top, width, height) => {
+    let count = 0;
+    for (let y = top; y < top + height; y++) for (let x = left; x < left + width; x++) {
+      if (data[(y * info.width + x) * info.channels] > 120) count++;
+    }
+    return count;
+  };
+  assert.ok(brightPixels(64, 166, 700, 140) > 10000, 'Large wordmark must render, not missing-font boxes');
+  assert.ok(brightPixels(48, 568, 1104, 40) > 500, 'Footer text must render');
 });
 
 test('portrait photographs preserve their top and bottom instead of being cropped', async () => {

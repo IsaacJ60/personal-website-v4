@@ -1,5 +1,21 @@
 # Photo preview: UI checkpoints
 
+## Production verification follow-up — November 23, 2026
+
+Commit `6ac1b96` deployed successfully on Vercel. Production HTTP checks confirmed
+294 sitemap URLs, robots, photo/Series metadata, Archive selection, noindex
+directives, and all card routes. Visual inspection caught missing text on the
+Linux-hosted cards despite valid JPEG dimensions: SVG text depended on absent
+system fonts. The renderer now registers a bundled Instrument Sans TTF through
+Sharp's text renderer; the exact font file is included in the function trace.
+Regression checks require visible wordmark and footer pixels.
+
+Production also redirects the bare domain to `www.isaacjiang.ca`. Metadata,
+root metadataBase, sitemap, robots, and image URLs now use that final host.
+Thirteen targeted tests, TypeScript, lint, local image inspection, and local
+www URL checks pass. These follow-up fixes are local and need another push;
+the corrected font rendering and host alignment still need hosted verification.
+
 ## Search and sharing — Checkpoint 3, November 23, 2026
 
 **All three local implementation checkpoints are ready for review.** Added native

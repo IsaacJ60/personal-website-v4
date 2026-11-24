@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const portfolioOrigin = "https://isaacjiang.ca";
+export const portfolioOrigin = "https://www.isaacjiang.ca";
 
 export function portfolioMetadata(title: string, description: string, path: string, index = true,
   image = { path: "/photo/share/default", alt: "IJ.PRIME — Photographs by Isaac Jiang" }): Metadata {

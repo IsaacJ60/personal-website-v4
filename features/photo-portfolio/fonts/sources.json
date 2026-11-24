@@ -1,5 +1,12 @@
 [
   {
+    "family": "Instrument Sans (sharing-card renderer)",
+    "file": "instrumentsans-share.ttf",
+    "bytes": 194336,
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/instrumentsans/InstrumentSans%5Bwdth%2Cwght%5D.ttf",
+    "licenseUrl": "https://raw.githubusercontent.com/google/fonts/main/ofl/instrumentsans/OFL.txt"
+  },
+  {
     "family": "Newsreader",
     "file": "newsreader-latin.woff2",
     "bytes": 58084,

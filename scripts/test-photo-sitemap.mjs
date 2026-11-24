@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { portfolioSitemap } from '../features/photo-portfolio/lib/sitemap.ts';
 
-const origin = 'https://isaacjiang.ca';
+const origin = 'https://www.isaacjiang.ca';
 test('sitemap lists public canonical pages and published photos, excluding demo and other collection kinds', () => {
   const result = portfolioSitemap(origin, [{ slug: 'a-photo' }], [
     { slug: 'real-series', kind: 'series', isDemo: false },

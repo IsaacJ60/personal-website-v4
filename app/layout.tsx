@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Isaac Jiang",
   description: "CS @ University of Waterloo",
-  metadataBase: new URL("https://isaacjiang.ca"),
+  metadataBase: new URL("https://www.isaacjiang.ca"),
 
   icons: {
     icon: "/favicon.ico",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Isaac Jiang",
     description: "CS @ University of Waterloo",
-    url: "https://isaacjiang.ca",
+    url: "https://www.isaacjiang.ca",
     siteName: "Isaac Jiang",
     images: [
       {

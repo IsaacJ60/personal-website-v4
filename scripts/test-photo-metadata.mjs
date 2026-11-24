@@ -15,7 +15,7 @@ test('archive links describe the selected photograph instead of the original rou
   assert.equal(context.photo.slug, 'first');
   assert.deepEqual(context.sequence.map((photo) => photo.slug), ['first', 'second', 'third']);
   const metadata = portfolioMetadata(context.active.title, 'Description', `/photo/photos/${context.active.slug}`);
-  assert.equal(metadata.alternates.canonical, 'https://isaacjiang.ca/photo/photos/second');
+  assert.equal(metadata.alternates.canonical, 'https://www.isaacjiang.ca/photo/photos/second');
   assert.equal(metadata.openGraph.url, metadata.alternates.canonical);
 });
 test('out-of-sequence and invalid photo selections match the viewer’s first-frame fallback', () => {
@@ -43,11 +43,11 @@ test('metadata keeps absolute titles and explicitly preserves nested sharing def
   assert.deepEqual(metadata.title, { absolute: 'Series — IJ.PRIME' });
   assert.equal(metadata.openGraph.title, metadata.twitter.title);
   assert.equal(metadata.openGraph.siteName, 'IJ.PRIME');
-  assert.equal(metadata.openGraph.images[0].url, 'https://isaacjiang.ca/photo/share/default');
+  assert.equal(metadata.openGraph.images[0].url, 'https://www.isaacjiang.ca/photo/share/default');
   assert.equal(metadata.twitter.images[0].url, metadata.openGraph.images[0].url);
   const photo = portfolioMetadata('Photo', 'Description', '/photo/photos/example', true,
     { path: '/photo/share/photos/example', alt: 'The photograph' });
-  assert.equal(photo.openGraph.images[0].url, 'https://isaacjiang.ca/photo/share/photos/example');
+  assert.equal(photo.openGraph.images[0].url, 'https://www.isaacjiang.ca/photo/share/photos/example');
   assert.equal(photo.twitter.images[0].alt, 'The photograph');
   assert.deepEqual(portfolioMetadata('Archive', 'Description', '/photo/archive?q=light', false).robots, { index: false, follow: true });
 });
