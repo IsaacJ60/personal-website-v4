@@ -9,7 +9,7 @@ export const metadata = portfolioMetadata("Series", "Photographic series and seq
 
 export default async function SeriesPage() {
   const { collections } = await getPortfolio();
-  const series = collections.filter((collection) => collection.kind === "series" && collection.photos.length > 0);
+  const series = collections.filter((collection) => collection.kind === "series" && (collection.publicView ?? "series") === "series" && collection.photos.length > 0);
 
   return <section aria-labelledby="series-title">
     <PortfolioPageHeader id="series-title" title="Series" />

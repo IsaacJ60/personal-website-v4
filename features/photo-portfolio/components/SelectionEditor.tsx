@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Star, X } from "lucide-react";
-import { logout, saveAndPublishPortfolioDraft, saveSelectionDraft, saveSeriesDraft } from "@/app/photo/admin/actions";
+import { deleteSeriesDraft, logout, saveAndPublishPortfolioDraft, saveSelectionDraft, saveSeriesDraft } from "@/app/photo/admin/actions";
 import type { AdminPortfolioPhoto, PortfolioPublication } from "../types";
 import { adminPhotosPath } from "../lib/admin-photos";
 import { useUnsavedChanges } from "../lib/use-unsaved-changes";
@@ -23,6 +23,7 @@ type EditorProps = {
 
 export default function SelectionEditor({ collectionId, revision, photos, initialIds, series, publication = null }: EditorProps) {
   const router = useRouter();
+  const deleteDialog = useRef<HTMLDialogElement>(null);
   const [ids, setIds] = useState(initialIds);
   const [savedIds, setSavedIds] = useState(initialIds);
   const [version, setVersion] = useState(revision);
@@ -78,8 +79,8 @@ export default function SelectionEditor({ collectionId, revision, photos, initia
     });
   }
 
-  async function saveAndPublish() {
-    const result = await saveAndPublishPortfolioDraft(collectionId, version, ids, details ?? null);
+  async function saveAndPublish(publicView: "series" | "archive" = "series") {
+    const result = await saveAndPublishPortfolioDraft(collectionId, version, ids, details ?? null, publicView);
     if (result.ok) {
       setVersion(result.revision);
       setSavedIds([...ids]);
@@ -99,17 +100,23 @@ export default function SelectionEditor({ collectionId, revision, photos, initia
         <button className={styles.actionButton} type="button" disabled={pending || !canSave} onClick={() => save()}>{pending ? "Saving…" : "Save draft"}</button>
         <button className={styles.actionButton} type="button" disabled={pending || !ids.length || (dirty && !canSave)} onClick={() => save(true)}>{dirty ? "Save & preview" : "Preview draft"}</button>
         <PublishDraft id={collectionId} revision={version} publication={publication}
-          title={details ? details.title.trim() : "Selected Work"}
-          hasPrivatePhotos={ids.some((id) => byId.get(id)?.published === false)}
+          title={details ? details.title.trim() : "Selected Work"} isSeries={Boolean(details)}
+          hasPrivatePhotos={!details && ids.some((id) => byId.get(id)?.published === false)}
           canPublish={ids.length > 0 && (!dirty || canSave)} busy={pending}
-          onPublicationChange={(published) => setMessage(published ? "Published." : "Unpublished. Your draft is still available.")}
+          onPublicationChange={(published) => setMessage(published ? "Public version saved." : "Private. Your draft is still available.")}
           onSaveAndPublish={dirty ? saveAndPublish : undefined} />
+        {details && version && <button className={styles.actionButton} type="button" disabled={pending || dirty || Boolean(publication) || photos.some((photo) => photo.ownerSeriesId === collectionId)}
+          title="Make private and move or delete all owned photos first" onClick={() => deleteDialog.current?.showModal()}>Delete series</button>}
         <form action={logout}><button className={styles.actionButton} disabled={pending || dirty} title={dirty ? "Save your changes before signing out" : undefined}>Sign out</button></form>
       </div>
     </header>
     <div className={styles.draftBar}>
       <Link className={styles.textLink} href="/photo/admin/series" onNavigate={guardNavigation}>{details ? "← Series" : "Series"}</Link>
       <Link className={styles.textLink} href={adminPhotosPath} onNavigate={guardNavigation}>Manage photos</Link>
+      {details && version && <>
+        <Link className={styles.textLink} href={`/photo/admin/photos/new?seriesId=${collectionId}`} onNavigate={guardNavigation}>Upload photo</Link>
+        <Link className={styles.textLink} href={`/photo/admin/photos/bulk?seriesId=${collectionId}`} onNavigate={guardNavigation}>Upload multiple photos</Link>
+      </>}
       <span role="status">{message || (dirty ? "Unsaved changes" : "")}</span>
     </div>
     {details && <div className={styles.detailsFields}>
@@ -118,8 +125,11 @@ export default function SelectionEditor({ collectionId, revision, photos, initia
       <label><span>Description <small>(optional)</small></span><textarea rows={3} value={details.description} maxLength={2000} disabled={pending}
         onChange={(event) => { setDetails({ ...details, description: event.target.value }); setMessage(""); }} /></label>
     </div>}
+    {details && !version && <p className={styles.hint}>Choose existing private photos below. Saving moves them from their current series into this one. You can also save an empty draft and upload new photos afterward.</p>}
+    {details && version && <p className={styles.hint}>Choose photos from the full library. Saving moves photos selected from other series into this one. Live photos in other series must be made private or removed from their public sequence first.</p>}
+    {!details && ids.some((id) => byId.get(id)?.published === false) && <p className={styles.hint}>Selected Work can use photos in Series or Archive. Private-draft selections remain saved here but must be removed before publishing Selected Work.</p>}
     <div className={styles.workspace}>
-      <AdminPhotoLibrary photos={photos} selection={{ ids: selected, selectedFirst: Boolean(details), pending, toggle }} />
+      <AdminPhotoLibrary photos={photos} selection={{ ids: selected, selectedFirst: Boolean(details), pending, toggle, eligibleOnly: !details, ownerSeriesId: details ? collectionId : undefined }} />
       <section className={styles.sequence} aria-labelledby="sequence-heading">
         <div className={styles.sectionHeading}><h2 id="sequence-heading">Your sequence</h2><span>{ids.length} selected</span></div>
         <p className={styles.hint}>{details
@@ -133,7 +143,7 @@ export default function SelectionEditor({ collectionId, revision, photos, initia
           return <li key={id}>
             <span className={styles.number}>{String(index + 1).padStart(2, "0")}</span>
             <span className={styles.sequenceThumb}><PortfolioImage photo={photo} thumbnail /></span>
-            <span className={styles.sequenceTitle}>{photo.title}{isCover && <span className={styles.meta}>Cover</span>}</span>
+            <span className={styles.sequenceTitle}>{photo.title}{!details && !photo.published && <span className={styles.meta}>Unavailable · private draft</span>}{isCover && <span className={styles.meta}>Cover</span>}</span>
             <div className={styles.sequenceControls}>
               {details && <button type="button" aria-label={`Use ${photo.title} as cover`} aria-pressed={isCover} title="Use as cover"
                 disabled={pending} onClick={() => { setDetails({ ...details, coverId: id }); setMessage(""); }}>
@@ -147,5 +157,18 @@ export default function SelectionEditor({ collectionId, revision, photos, initia
         })}</ol>
       </section>
     </div>
+    <dialog ref={deleteDialog} className={styles.publishDialog} aria-label="Delete empty series"
+      onCancel={(event) => { if (pending) event.preventDefault(); }}>
+      <h2>Delete {details?.title}?</h2>
+      <p>This permanently deletes the empty series draft and its inactive public copy.</p>
+      <div className={styles.actions}>
+        <button type="button" disabled={pending} onClick={() => deleteDialog.current?.close()}>Cancel</button>
+        <button type="button" disabled={pending} onClick={() => startTransition(async () => {
+          const result = await deleteSeriesDraft(collectionId, version ?? "");
+          if (!result.ok) { setMessage(result.message); deleteDialog.current?.close(); return; }
+          router.replace("/photo/admin/series");
+        })}>{pending ? "Deleting…" : "Delete series"}</button>
+      </div>
+    </dialog>
   </section>;
 }

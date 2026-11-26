@@ -1,6 +1,6 @@
-import UploadPhotoForm from "@/features/photo-portfolio/components/UploadPhotoForm";
-import { getPhotoLocations } from "@/features/photo-portfolio/data/admin";
+import UploadWorkspace from "@/features/photo-portfolio/components/UploadWorkspace";
 
-export default async function NewPhotoPage() {
-  return <UploadPhotoForm locations={await getPhotoLocations()} />;
+export default async function UploadPage({ searchParams }: { searchParams: Promise<{ seriesId?: string }> }) {
+  const { seriesId } = await searchParams;
+  return <UploadWorkspace seriesId={seriesId} />;
 }

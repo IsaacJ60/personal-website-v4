@@ -346,6 +346,7 @@ export type Database = {
           kind: string
           legacy_bundle_id: string | null
           location_name: string | null
+          public_view: string
           published: boolean
           slug: string
           sort_order: number
@@ -363,6 +364,7 @@ export type Database = {
           kind: string
           legacy_bundle_id?: string | null
           location_name?: string | null
+          public_view?: string
           published?: boolean
           slug: string
           sort_order?: number
@@ -380,6 +382,7 @@ export type Database = {
           kind?: string
           legacy_bundle_id?: string | null
           location_name?: string | null
+          public_view?: string
           published?: boolean
           slug?: string
           sort_order?: number
@@ -393,6 +396,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "photo_v3_photos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photo_v3_collections_public_view_fkey"
+            columns: ["public_view"]
+            isOneToOne: false
+            referencedRelation: "photo_v3_public_views"
+            referencedColumns: ["key"]
           },
         ]
       }
@@ -425,6 +435,7 @@ export type Database = {
           image_width: number | null
           location: string | null
           object_key: string
+          owner_series_id: string
           published: boolean
           slug: string
           tags: string[]
@@ -444,6 +455,7 @@ export type Database = {
           image_width?: number | null
           location?: string | null
           object_key: string
+          owner_series_id: string
           published?: boolean
           slug: string
           tags?: string[]
@@ -463,11 +475,35 @@ export type Database = {
           image_width?: number | null
           location?: string | null
           object_key?: string
+          owner_series_id?: string
           published?: boolean
           slug?: string
           tags?: string[]
           title?: string
           updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_v3_photos_owner_series_id_fkey"
+            columns: ["owner_series_id"]
+            isOneToOne: false
+            referencedRelation: "photo_v3_collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photo_v3_public_views: {
+        Row: {
+          key: string
+          label: string
+        }
+        Insert: {
+          key: string
+          label: string
+        }
+        Update: {
+          key?: string
+          label?: string
         }
         Relationships: []
       }
@@ -616,8 +652,31 @@ export type Database = {
           public_slug: string
         }[]
       }
+      photo_v3_delete_series: {
+        Args: { p_expected_updated_at: string; p_series_id: string }
+        Returns: undefined
+      }
+      photo_v3_move_photo: {
+        Args: {
+          p_expected_updated_at: string
+          p_photo_id: string
+          p_series_id: string
+        }
+        Returns: string
+      }
       photo_v3_publish_draft: {
         Args: { p_draft_id: string; p_expected_updated_at: string }
+        Returns: {
+          collection_kind: string
+          public_slug: string
+        }[]
+      }
+      photo_v3_publish_in_view: {
+        Args: {
+          p_draft_id: string
+          p_expected_updated_at: string
+          p_public_view: string
+        }
         Returns: {
           collection_kind: string
           public_slug: string
@@ -632,6 +691,22 @@ export type Database = {
           p_kind: string
           p_photo_ids: string[]
           p_title?: string
+        }
+        Returns: {
+          collection_kind: string
+          public_slug: string
+          saved_revision: string
+        }[]
+      }
+      photo_v3_save_and_publish_in_view: {
+        Args: {
+          p_cover_photo_id?: string
+          p_description: string
+          p_draft_id: string
+          p_expected_updated_at?: string
+          p_photo_ids: string[]
+          p_public_view?: string
+          p_title: string
         }
         Returns: {
           collection_kind: string

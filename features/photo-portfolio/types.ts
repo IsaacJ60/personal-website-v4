@@ -1,6 +1,7 @@
 export type PortfolioPublication = {
   revision: string;
   liveRevision: string;
+  publicView?: string;
   href: string;
 };
 
@@ -32,9 +33,10 @@ export type PortfolioCollection = {
   isDemo: boolean;
   updatedAt?: string;
   coverPhotoId?: string | null;
+  publicView?: string;
 };
 
-export type AdminPortfolioPhoto = PortfolioPhoto & { published: boolean };
+export type AdminPortfolioPhoto = PortfolioPhoto & { published: boolean; ownerSeriesId: string; ownerSeriesTitle: string };
 
 export type PhotoDetails = {
   title: string;

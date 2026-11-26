@@ -30,7 +30,7 @@ test('full-size requests reject invalid and unpublished photos before accessing 
   t.mock.method(globalThis, 'fetch', async input => {
     queries++;
     const url = new URL(input instanceof Request ? input.url : input);
-    assert.equal(url.searchParams.get('published'), 'eq.true');
+    assert.equal(url.searchParams.get('published'), null);
     return Response.json(null);
   });
   t.mock.method(originalStorageClient, 'send', async () => assert.fail('must not read private storage'));
@@ -72,11 +72,11 @@ test('full-size preview is generated once in R2, then served by signed redirects
     const response = await request(id);
     assert.equal(response.status, 302);
     assert.equal((await response.arrayBuffer()).byteLength, 0, 'Vercel never returns image bytes');
-    assert.equal(response.headers.get('Cache-Control'), 'public, max-age=300, s-maxage=300');
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
     const url = new URL(response.headers.get('Location'));
     assert.equal(url.hostname, 'photo-v3-originals.unit-account.r2.cloudflarestorage.com');
     assert.equal(url.pathname, `/previews/${id}/full-size-v1.jpg`);
-    assert.equal(url.searchParams.get('X-Amz-Expires'), '3600');
+    assert.equal(url.searchParams.get('X-Amz-Expires'), '60');
     assert.ok(url.searchParams.has('X-Amz-Signature'));
   }
   assert.deepEqual(calls, ['HeadObjectCommand', 'GetObjectCommand', 'PutObjectCommand', 'HeadObjectCommand']);

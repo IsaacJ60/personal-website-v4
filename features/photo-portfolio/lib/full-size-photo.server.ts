@@ -39,5 +39,5 @@ export async function fullSizePhotoUrl(objectKey: string, signal: AbortSignal) {
     } finally { signal.removeEventListener("abort", abort); }
   }
   signal.throwIfAborted();
-  return getSignedUrl(originalStorageClient, new GetObjectCommand({ Bucket, Key }), { expiresIn: 3600 });
+  return getSignedUrl(originalStorageClient, new GetObjectCommand({ Bucket, Key, ResponseCacheControl: "private, no-store" }), { expiresIn: 60 });
 }

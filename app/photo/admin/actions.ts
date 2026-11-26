@@ -20,12 +20,14 @@ function validRevision(value: unknown): value is string {
 
 function publicationError(code?: string): { ok: false; message: string } {
   if (code === "40001") return { ok: false, message: "This draft or its public version changed in another window. Reload before trying again." };
-  if (code === "23514") return { ok: false, message: "Every photograph must be public before you can publish this draft." };
+  if (code === "23514") return { ok: false, message: "Check series ownership, cover, image sizes, and Selected Work eligibility." };
   return { ok: false, message: "Couldn’t publish this draft. Check the sequence and try again." };
 }
 
-function refreshPublicationViews(id: string, kind: string, slug: string) {
-  const href = publishedPortfolioHref(kind, slug);
+function refreshPublicationViews(id: string, kind: string, slug: string, publicView = "series") {
+  revalidatePath("/photo", "layout");
+  revalidatePath("/sitemap.xml");
+  const href = publishedPortfolioHref(kind, slug, publicView);
   if (kind === "selected") {
     revalidatePath("/photo/admin");
     revalidatePath("/photo/admin/preview");
@@ -35,6 +37,9 @@ function refreshPublicationViews(id: string, kind: string, slug: string) {
     revalidatePath(editor);
     revalidatePath(`${editor}/preview`, "layout");
     revalidatePath("/photo/series");
+    revalidatePath("/photo/archive");
+    revalidatePath(`/photo/series/${encodeURIComponent(slug)}`);
+    revalidatePath(`/photo/archive/${encodeURIComponent(slug)}`);
   }
   revalidatePath(href);
   return href;
@@ -76,45 +81,46 @@ export async function saveSelectionDraft(collectionId: string, revision: string,
   return { ok: true, updatedAt: data };
 }
 
-export async function publishPortfolioDraft(id: string, revision: string): Promise<PublishResult> {
+export async function publishPortfolioDraft(id: string, revision: string, publicView?: "series" | "archive"): Promise<PublishResult> {
   const client = await requirePortfolioAdmin();
   if (typeof id !== "string" || !portfolioUuid.test(id)
-    || !validRevision(revision)) {
+    || !validRevision(revision) || (publicView !== undefined && publicView !== "series" && publicView !== "archive")) {
     return { ok: false, message: "This preview is unavailable. Reopen it from the editor." };
   }
 
-  const { data, error } = await client.rpc("photo_v3_publish_draft", {
+  const { data, error } = await client.rpc(publicView ? "photo_v3_publish_in_view" : "photo_v3_publish_draft", {
     p_draft_id: id,
     p_expected_updated_at: revision,
+    ...(publicView ? { p_public_view: publicView } : {}),
   }).single();
   if (error || !data) return publicationError(error?.code);
-  const href = refreshPublicationViews(id, data.collection_kind, data.public_slug);
+  const href = refreshPublicationViews(id, data.collection_kind, data.public_slug, publicView);
   return { ok: true, href, revision };
 }
 
 export async function saveAndPublishPortfolioDraft(
   id: string, revision: string | null, photoIds: string[],
   series: { title: string; description: string; coverId: string | null } | null,
+  publicView: "series" | "archive" = "series",
 ): Promise<PublishResult> {
   const client = await requirePortfolioAdmin();
   if (typeof id !== "string" || !portfolioUuid.test(id) || (revision !== null && !validRevision(revision))
-    || !validPhotoIds(photoIds) || !photoIds.length
+    || !validPhotoIds(photoIds) || !photoIds.length || !["series", "archive"].includes(publicView)
     || (series !== null && (!series || typeof series.title !== "string" || typeof series.description !== "string"
       || !series.title.trim() || series.title.trim().length > 120 || series.description.trim().length > 2000
       || (series.coverId !== null && !photoIds.includes(series.coverId))))) {
     return { ok: false, message: "Check the title and selected photographs before publishing." };
   }
-  const { data, error } = await client.rpc("photo_v3_save_and_publish_draft", {
-    p_draft_id: id,
-    p_kind: series ? "series" : "selected",
-    p_photo_ids: photoIds,
-    p_expected_updated_at: revision ?? undefined,
-    p_title: series?.title.trim(),
-    p_description: series?.description.trim(),
+  const common = {
+    p_draft_id: id, p_photo_ids: photoIds, p_expected_updated_at: revision ?? undefined,
     p_cover_photo_id: series?.coverId ?? undefined,
-  }).single();
+  };
+  const query = series
+    ? client.rpc("photo_v3_save_and_publish_in_view", { ...common, p_title: series.title.trim(), p_description: series.description.trim(), p_public_view: publicView })
+    : client.rpc("photo_v3_save_and_publish_draft", { ...common, p_kind: "selected" });
+  const { data, error } = await query.single();
   if (error || !data) return publicationError(error?.code);
-  const href = refreshPublicationViews(id, data.collection_kind, data.public_slug);
+  const href = refreshPublicationViews(id, data.collection_kind, data.public_slug, publicView);
   return { ok: true, href, revision: data.saved_revision };
 }
 
@@ -157,11 +163,23 @@ export async function saveSeriesDraft(
   if (error || !data) {
     return { ok: false, message: error?.code === "40001"
       ? "This draft already changed. Open its latest version from the Series list before saving again."
-      : "Couldn’t save the draft. Your changes are still here; please try again." };
+      : error?.code === "23514" ? "A selected photo is still live in another series. Publish its removal or make that series private before moving it."
+        : "Couldn’t save the draft. Your changes are still here; please try again." };
   }
   const path = `/photo/admin/series/${collectionId}`;
   revalidatePath("/photo/admin/series");
   revalidatePath(path);
   revalidatePath(`${path}/preview`, "layout");
   return { ok: true, updatedAt: data };
+}
+
+export async function deleteSeriesDraft(id: string, revision: string): Promise<PublicationResult> {
+  const client = await requirePortfolioAdmin();
+  if (!portfolioUuid.test(id) || !validRevision(revision)) return { ok: false, message: "Reload before deleting this series." };
+  const { error } = await client.rpc("photo_v3_delete_series", { p_series_id: id, p_expected_updated_at: revision });
+  if (error) return { ok: false, message: error.code === "40001" ? "This series changed. Reload before deleting."
+    : "Make this series private and move or delete its owned photos before deleting it." };
+  revalidatePath("/photo", "layout");
+  revalidatePath("/sitemap.xml");
+  return { ok: true };
 }

@@ -11,10 +11,10 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   if (!portfolioUuid.test(id) || !isPhotoVariant(variant)) return unavailable();
   // Anonymous storage RLS permits signing only when the corresponding photo is public.
   const { data, error } = await createPublicPortfolioClient().storage.from(photoMediaBucket)
-    .createSignedUrl(uploadedPhotoKey(id, variant), 3600);
+    .createSignedUrl(uploadedPhotoKey(id, variant), 60);
   if (error || !data?.signedUrl) return unavailable();
   return new Response(null, {
     status: 302,
-    headers: { Location: data.signedUrl, "Cache-Control": "public, max-age=300, s-maxage=1800" },
+    headers: { Location: data.signedUrl, "Cache-Control": "no-store" },
   });
 }

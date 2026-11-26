@@ -15,6 +15,8 @@ type Selection = {
   ids: ReadonlySet<string>;
   selectedFirst: boolean;
   pending: boolean;
+  eligibleOnly?: boolean;
+  ownerSeriesId?: string;
   toggle: (id: string) => void;
 };
 
@@ -26,8 +28,10 @@ export default function AdminPhotoLibrary({ photos, selection, initialSearch }: 
   const [query, setQuery] = useState(initialSearch?.query ?? "");
   const [requestedPage, setPage] = useState(initialSearch?.page ?? 1);
   const [view, setView] = useState<PhotoLibraryView>(initialSearch?.view ?? "grid");
+  const [owner, setOwner] = useState("");
+  const owners = [...new Map(photos.map((photo) => [photo.ownerSeriesId, photo.ownerSeriesTitle])).entries()];
   const term = query.trim().toLocaleLowerCase();
-  const matches = photos.filter((photo) => `${photo.title} ${photo.location ?? ""}`.toLocaleLowerCase().includes(term));
+  const matches = photos.filter((photo) => (!owner || photo.ownerSeriesId === owner) && (!selection?.eligibleOnly || photo.published || selection.ids.has(photo.id)) && `${photo.title} ${photo.location ?? ""} ${photo.ownerSeriesTitle}`.toLocaleLowerCase().includes(term));
   if (selection?.selectedFirst) {
     const { ids } = selection;
     matches.sort((a, b) => Number(ids.has(b.id)) - Number(ids.has(a.id)));
@@ -40,6 +44,10 @@ export default function AdminPhotoLibrary({ photos, selection, initialSearch }: 
     {selection && <div className={styles.sectionHeading}><h2>Photo library</h2><span>{photos.length} photographs</span></div>}
     <label className={styles.search}>Search the library<input type="search" placeholder="Title or location" value={query}
       onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></label>
+    <label className={styles.search}>Series<select value={owner} onChange={(event) => { setOwner(event.target.value); setPage(1); }}>
+      <option value="">All series</option>
+      {owners.map(([id, title]) => <option key={id} value={id}>{title}</option>)}
+    </select></label>
     {!selection && <div className={styles.libraryToolbar}>
       <p className={styles.libraryCount} role="status">
         {matches.length ? `${start + 1}–${Math.min(start + pageSize, matches.length)} of ${matches.length} photos` : "0 photos"}
@@ -52,6 +60,7 @@ export default function AdminPhotoLibrary({ photos, selection, initialSearch }: 
     <div className={`${styles.photoGrid}${!selection && view === "compact" ? ` ${styles.compactGrid}` : ""}`}>
       {matches.slice(start, start + pageSize).map((photo) => {
         const selected = selection?.ids.has(photo.id) ?? false;
+        const liveElsewhere = Boolean(selection?.ownerSeriesId && photo.ownerSeriesId !== selection.ownerSeriesId && photo.published);
         const content = <>
           <span className={styles.thumbnail}>
             <PortfolioImage photo={photo} thumbnail />
@@ -60,11 +69,12 @@ export default function AdminPhotoLibrary({ photos, selection, initialSearch }: 
             </span>
           </span>
           <span className={styles.photoTitle}>{photo.title}</span>
-          <span className={styles.meta}>{photo.location || "Location not set"}{!photo.published && " · Unpublished"}</span>
+          <span className={styles.meta}>{photo.location || "Location not set"}{" · "}{photo.ownerSeriesTitle}{!photo.published && " · Private"}</span>
+          {liveElsewhere && <span className={styles.meta}>Make its series private or publish its removal before moving</span>}
         </>;
         if (selection) return <button type="button" key={photo.id}
           className={`${styles.photoCard} ${selected ? styles.chosen : ""}`}
-          aria-pressed={selected} disabled={selection.pending} onClick={() => selection.toggle(photo.id)}>{content}</button>;
+          aria-pressed={selected} disabled={selection.pending || liveElsewhere || Boolean(selection.eligibleOnly && !photo.published && !selected)} onClick={() => selection.toggle(photo.id)}>{content}</button>;
         return <Link key={photo.id} className={`${styles.photoCard} ${styles.editablePhoto}`} prefetch={false}
           aria-label={`Edit ${photo.title}`} href={adminPhotoHref({ query, page, view }, photo.id)}>{content}</Link>;
       })}

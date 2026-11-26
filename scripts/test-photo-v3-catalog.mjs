@@ -19,8 +19,9 @@ const photo = { id, slug: 'new-edit', title: 'New edit', description: null, alt_
 test('v3 photos use only their own derivative routes, even for a reused slug', () => {
   const mapped = mapPhoto(photo);
   assert.equal(mapped.src, `/api/photo-preview/media/${id}/display`);
+  assert.equal(mapPhoto({ ...photo, published: false }).src, `/api/photo-preview/media/${id}/display`);
   assert.equal(mapped.thumbnail, `/api/photo-preview/media/${id}/thumbnail`);
-  assert.equal(mapPhoto({ ...photo, published: false }).src, `/api/photo-preview/draft-media/${id}/display`);
+  assert.equal(mapPhoto(photo, false).src, `/api/photo-preview/draft-media/${id}/display`);
   for (const key of ['legacy.jpg', 'https://media.isaacjiang.ca/camera/old.jpg', `uploads/${id}/thumbnail.webp`]) {
     assert.throws(() => mapPhoto({ ...photo, object_key: key }), /Unsupported v3/);
   }
@@ -31,7 +32,7 @@ test('empty v3 stays empty and never requests an old catalog', async t => {
   t.mock.method(globalThis, 'fetch', async input => {
     const url = new URL(input instanceof Request ? input.url : input);
     requested.push(url.pathname);
-    assert.equal(url.searchParams.get('published'), 'eq.true');
+    assert.equal(url.searchParams.get('published'), url.pathname.endsWith('_photos') ? null : 'eq.true');
     return Response.json([]);
   });
   const portfolio = await getPortfolio();
@@ -55,4 +56,47 @@ test('published v3 collections resolve their own ordered memberships', async t =
   assert.equal(portfolio.collections.length, 1);
   assert.equal(portfolio.selected.isDemo, false);
   assert.deepEqual(portfolio.selected.photos.map(p => p.id), [secondId, id]);
+});
+
+test('a retained selection cannot rescue a photo absent from anonymous series visibility',async t=>{
+  t.mock.method(globalThis,'fetch',async input=>{
+    const url=new URL(input instanceof Request?input.url:input);
+    if(url.pathname.endsWith('_photos'))return Response.json([]);
+    return Response.json([{id:'selection',slug:'selected',title:'Selected Work',kind:'selected',cover_photo_id:id,
+      photo_v3_collection_photos:[{photo_id:id,position:0}]}]);
+  });
+  const portfolio=await getPortfolio();
+  assert.deepEqual(portfolio.photos,[]);
+  assert.equal(portfolio.selected,undefined);
+  assert.deepEqual(portfolio.collections[0].photos,[]);
+  assert.equal(portfolio.collections[0].coverPhotoId,null);
+});
+
+test('public catalog retains archive placement and lets Selected Work reference archived series photos',async t=>{
+ t.mock.method(globalThis,'fetch',async input=>{
+  const url=new URL(input instanceof Request?input.url:input);
+  if(url.pathname.endsWith('_photos'))return Response.json([photo]);
+  return Response.json([
+   {id:'archived',slug:'flowers',title:'Flowers',kind:'series',public_view:'archive',photo_v3_collection_photos:[{photo_id:id,position:0}]},
+   {id:'selected',slug:'selected-work-live',title:'Selected Work',kind:'selected',public_view:'series',photo_v3_collection_photos:[{photo_id:id,position:0}]},
+  ]);
+ });
+ const result=await getPortfolio();
+ assert.equal(result.collections[0].publicView,'archive');
+ assert.equal(result.collections[0].photos[0].id,id);
+ assert.equal(result.selected.photos[0].id,id);
+});
+test('old schema overlap defaults public copies to Series without exposing private drafts',async t=>{
+ let attempts=0;
+ t.mock.method(globalThis,'fetch',async input=>{
+  const url=new URL(input instanceof Request?input.url:input);
+  if(url.pathname.endsWith('_photos'))return Response.json([photo]);
+  attempts++;
+  if(url.searchParams.get('select').includes('public_view'))return Response.json({code:'42703',message:'column public_view does not exist'},{status:400});
+  assert.equal(url.searchParams.get('published'),'eq.true');
+  return Response.json([{id:'series',slug:'old',title:'Old',kind:'series',photo_v3_collection_photos:[{photo_id:id,position:0}]}]);
+ });
+ const result=await getPortfolio();
+ assert.equal(attempts,2);
+ assert.equal(result.collections[0].publicView,'series');
 });

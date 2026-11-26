@@ -856,3 +856,299 @@ test('v3 storage policies isolate same-ID media from v2 and constrain cleanup', 
     await asRole(db,'anon',null,async () => assert.equal((await db.query("SELECT * FROM storage.objects WHERE bucket_id='portfolio-v3-media'")).rows.length,2));
   } finally { await db.close(); }
 });
+
+const ownershipMigration = await readMigration('_series_photo_ownership.sql');
+async function createSeriesDatabase() {
+  const db = await createDatabase();
+  for (const sql of [migration, catalogMigration, v3Migration]) await db.exec(sql);
+  await db.exec(`CREATE SCHEMA storage;
+    CREATE TABLE storage.buckets(id text PRIMARY KEY,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+    CREATE TABLE storage.objects(bucket_id text REFERENCES storage.buckets(id),name text,PRIMARY KEY(bucket_id,name));
+    ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+    GRANT USAGE ON SCHEMA storage TO anon,authenticated;
+    GRANT SELECT,INSERT,UPDATE,DELETE ON storage.objects TO anon,authenticated;`);
+  await db.exec(v3MediaMigration);
+  return db;
+}
+async function adminCommit(db, callback) {
+  await db.exec('BEGIN');
+  try {
+    await db.query("SELECT set_config('request.jwt.claim.sub',$1,true)", [admin]);
+    await db.exec('SET LOCAL ROLE authenticated');
+    const result = await callback();
+    await db.exec('COMMIT');
+    return result;
+  } catch (error) { await db.exec('ROLLBACK'); throw error; }
+}
+const seriesPhoto = '00000000-0000-4000-8000-000000000091';
+async function addOwnedPhoto(db, series, id = seriesPhoto, media = true) {
+  if (media) await db.query("INSERT INTO storage.objects VALUES('portfolio-v3-media',$1),('portfolio-v3-media',$2)",
+    [`uploads/${id}/display.webp`,`uploads/${id}/thumbnail.webp`]);
+  await db.query(`INSERT INTO public.photo_v3_photos(id,slug,title,date_taken,alt_text,object_key,image_width,image_height,owner_series_id)
+    VALUES($1::uuid,$1::text,'Test','2026-11-25','Test',$2,1600,1200,$3)`,[id,`uploads/${id}/display.webp`,series]);
+}
+async function newSeries(db, title = 'Test series') {
+  return (await db.query("INSERT INTO public.photo_v3_collections(slug,title,kind) VALUES(gen_random_uuid()::text,$1,'series') RETURNING id",[title])).rows[0].id;
+}
+async function publishSeries(db, id) {
+  const revision=(await db.query('SELECT updated_at FROM public.photo_v3_collections WHERE id=$1',[id])).rows[0].updated_at;
+  return (await db.query('SELECT * FROM public.photo_v3_publish_draft($1,$2)',[id,revision])).rows[0];
+}
+
+test('series ownership backfills loose photos privately and preserves legacy catalogs', async () => {
+  const db=await createSeriesDatabase();
+  try {
+    await db.query(`INSERT INTO public.photo_v3_photos(id,slug,title,date_taken,alt_text,object_key,published)
+      VALUES($1,'loose','Loose','2026-11-25','Loose',$2,true)`,[seriesPhoto,`uploads/${seriesPhoto}/display.webp`]);
+    await db.exec(ownershipMigration);
+    const owner=(await db.query('SELECT c.title FROM public.photo_v3_photos p JOIN public.photo_v3_collections c ON c.id=p.owner_series_id')).rows;
+    assert.deepEqual(owner,[{title:'To organize'}]);
+    await asRole(db,'anon',null,async()=>assert.equal((await db.query('SELECT * FROM public.photo_v3_photos')).rows.length,0));
+    assert.equal((await rows(db,'photos')).length,2);
+  } finally {await db.close();}
+});
+
+test('series publication controls anonymous photos, memberships and storage together', async () => {
+  const db=await createSeriesDatabase();
+  try {
+    await db.exec(ownershipMigration);
+    const series=await adminCommit(db,()=>newSeries(db));
+    const second='00000000-0000-4000-8000-000000000092';
+    const read=async(expected)=>{
+      for (const [role,user] of [['anon',null],['authenticated',otherUser]]) await asRole(db,role,user,async()=>{
+        assert.equal((await db.query('SELECT * FROM public.photo_v3_photos')).rows.length,expected);
+        assert.equal((await db.query("SELECT * FROM storage.objects WHERE bucket_id='portfolio-v3-media'")).rows.length,expected*2);
+      });
+    };
+    await adminCommit(db,()=>addOwnedPhoto(db,series));
+    await read(0);
+    await adminCommit(db,()=>db.query('UPDATE public.photo_v3_photos SET published=true WHERE id=$1',[seriesPhoto]));
+    await read(0);
+    await adminCommit(db,()=>publishSeries(db,series));
+    await read(1);
+    await adminCommit(db,()=>addOwnedPhoto(db,series,second));
+    await read(1);
+    const liveId=(await db.query('SELECT live_id FROM public.photo_v3_publications WHERE draft_id=$1',[series])).rows[0].live_id;
+    assert.equal((await db.query('SELECT * FROM public.photo_v3_collection_photos WHERE collection_id=$1',[liveId])).rows.length,1);
+    await adminCommit(db,()=>publishSeries(db,series));
+    await read(2);
+    // Selected Work cannot preserve visibility after the owner is unpublished.
+    await adminCommit(db,async()=>{
+      const draft=(await db.query("SELECT * FROM public.photo_v3_collections WHERE slug='selected-work'")).rows[0];
+      await db.query('SELECT public.photo_v3_save_and_publish_draft($1,$2,$3,$4)',[draft.id,'selected',[seriesPhoto],draft.updated_at]);
+    });
+    const destination=await adminCommit(db,()=>newSeries(db,'Destination'));
+    await assert.rejects(adminCommit(db,async()=>{
+      const photo=(await db.query('SELECT updated_at FROM public.photo_v3_photos WHERE id=$1',[seriesPhoto])).rows[0];
+      await db.query('SELECT public.photo_v3_move_photo($1,$2,$3)',[seriesPhoto,destination,photo.updated_at]);
+    }),/Publish its removal/);
+    await adminCommit(db,async()=>{
+      const live=(await db.query('SELECT updated_at FROM public.photo_v3_collections WHERE id=$1',[liveId])).rows[0];
+      await db.query('SELECT public.photo_v3_unpublish_draft($1,$2)',[series,live.updated_at]);
+    });
+    await read(0);
+    await asRole(db,'anon',null,async()=>assert.equal((await db.query('SELECT * FROM public.photo_v3_collection_photos')).rows.length,0));
+    assert.ok((await db.query('SELECT * FROM public.photo_v3_collection_photos WHERE photo_id=$1',[seriesPhoto])).rows.length>1);
+    await adminCommit(db,async()=>{
+      const photo=(await db.query('SELECT updated_at FROM public.photo_v3_photos WHERE id=$1',[seriesPhoto])).rows[0];
+      await db.query('SELECT public.photo_v3_move_photo($1,$2,$3)',[seriesPhoto,destination,photo.updated_at]);
+    });
+    assert.equal((await db.query('SELECT owner_series_id FROM public.photo_v3_photos WHERE id=$1',[seriesPhoto])).rows[0].owner_series_id,destination);
+    await assert.rejects(adminCommit(db,()=>db.query('DELETE FROM public.photo_v3_collections WHERE id=$1',[destination])),/foreign key|Unpublish and move/);
+    await adminCommit(db,()=>publishSeries(db,destination));
+    await read(1);
+    await adminCommit(db,()=>db.query('DELETE FROM public.photo_v3_photos WHERE id=$1',[seriesPhoto]));
+    await read(0);
+    assert.equal((await db.query('SELECT * FROM public.photo_v3_media_cleanup WHERE photo_id=$1',[seriesPhoto])).rows.length,1);
+  } finally {await db.close();}
+});
+
+test('database rejects unowned photos, invalid owners, cross-series membership and incomplete publications',async()=>{
+  const db=await createSeriesDatabase();
+  try {
+    await db.exec(ownershipMigration);
+    const series=await adminCommit(db,()=>newSeries(db));
+    const other=await adminCommit(db,()=>newSeries(db,'Other'));
+    await assert.rejects(adminCommit(db,()=>db.query(`INSERT INTO public.photo_v3_photos(slug,title,date_taken,alt_text,object_key) VALUES('unowned','Unowned','2026-11-25','Unowned','invalid')`)),/not-null/);
+    const selected=(await db.query("SELECT id FROM public.photo_v3_collections WHERE slug='selected-work'")).rows[0].id;
+    await assert.rejects(adminCommit(db,()=>addOwnedPhoto(db,selected)),/editable series/);
+    await assert.rejects(adminCommit(db,()=>publishSeries(db,series)),/at least one/);
+    await adminCommit(db,()=>addOwnedPhoto(db,series,seriesPhoto,false));
+    await assert.rejects(adminCommit(db,()=>publishSeries(db,series)),/both derivatives/);
+    await assert.rejects(adminCommit(db,()=>db.query('INSERT INTO public.photo_v3_collection_photos(collection_id,photo_id,position) VALUES($1,$2,0)',[other,seriesPhoto])),/only owned photos/);
+    await assert.rejects(adminCommit(db,()=>db.query('SELECT public.photo_v3_save_series_draft($1,$2,$3,$4,$5,$6)',[series,'Test','',[seriesPhoto],'2020-01-01',seriesPhoto])),/changed in another session/);
+    for (const [role,user] of [['anon',null],['authenticated',otherUser]]) {
+      await assert.rejects(asRole(db,role,user,()=>db.query('SELECT public.photo_v3_move_photo($1,$2,now())',[seriesPhoto,other])),/permission denied|Administrator access required/);
+    }
+  }finally{await db.close();}
+});
+
+test('draft saves preserve the live sequence; direct moves, deletion and failed publish remain atomic',async()=>{
+  const db=await createSeriesDatabase();
+  try{
+    await db.exec(ownershipMigration);
+    const series=await adminCommit(db,()=>newSeries(db));
+    const destination=await adminCommit(db,()=>newSeries(db,'Destination'));
+    const second='00000000-0000-4000-8000-000000000093';
+    await adminCommit(db,async()=>{await addOwnedPhoto(db,series);await addOwnedPhoto(db,series,second);await publishSeries(db,series);});
+    await assert.rejects(adminCommit(db,()=>db.query('UPDATE public.photo_v3_photos SET owner_series_id=$1 WHERE id=$2',[destination,seriesPhoto])),/Publish its removal/);
+    await assert.rejects(adminCommit(db,()=>db.query('SELECT public.photo_v3_delete_series($1,(SELECT updated_at FROM public.photo_v3_collections WHERE id=$1))',[series])),/Unpublish and move/);
+    await adminCommit(db,async()=>{
+      const draft=(await db.query('SELECT updated_at FROM public.photo_v3_collections WHERE id=$1',[series])).rows[0];
+      await db.query('SELECT public.photo_v3_save_series_draft($1,$2,$3,$4,$5,$6)',[series,'Edited title','',[second],draft.updated_at,second]);
+    });
+    await asRole(db,'anon',null,async()=>{
+      assert.equal((await db.query('SELECT * FROM public.photo_v3_photos')).rows.length,2);
+      assert.equal((await db.query('SELECT title FROM public.photo_v3_collections')).rows[0].title,'Test series');
+    });
+    await adminCommit(db,()=>publishSeries(db,series));
+    await asRole(db,'anon',null,async()=>assert.deepEqual((await db.query('SELECT id FROM public.photo_v3_photos')).rows.map(r=>r.id),[second]));
+    // Removing from the draft never removes ownership.
+    assert.equal((await db.query('SELECT owner_series_id FROM public.photo_v3_photos WHERE id=$1',[seriesPhoto])).rows[0].owner_series_id,series);
+    await adminCommit(db,()=>db.query('UPDATE public.photo_v3_photos SET owner_series_id=$1 WHERE id=$2',[destination,seriesPhoto]));
+    assert.equal((await db.query('SELECT collection_id FROM public.photo_v3_collection_photos WHERE photo_id=$1',[seriesPhoto])).rows[0].collection_id,destination);
+    // Failed publication rolls back the snapshot and publication mapping.
+    const empty=await adminCommit(db,()=>newSeries(db,'Empty'));
+    await assert.rejects(adminCommit(db,()=>publishSeries(db,empty)),/at least one/);
+    assert.equal((await db.query('SELECT * FROM public.photo_v3_publications WHERE draft_id=$1',[empty])).rows.length,0);
+    await adminCommit(db,()=>db.query('SELECT public.photo_v3_delete_series($1,(SELECT updated_at FROM public.photo_v3_collections WHERE id=$1))',[empty]));
+    assert.equal((await db.query('SELECT * FROM public.photo_v3_collections WHERE id=$1',[empty])).rows.length,0);
+    await assert.rejects(adminCommit(db,()=>db.query('UPDATE public.photo_v3_collections SET cover_photo_id=$1 WHERE id=$2',[seriesPhoto,series])),/cover must be in the sequence/);
+    // Explicit deletion of a live cover hides emptied snapshots, retaining bytes
+    // until the existing cleanup worker processes its durable queue.
+    await adminCommit(db,()=>db.query('DELETE FROM public.photo_v3_photos WHERE id=$1',[second]));
+    await asRole(db,'anon',null,async()=>assert.equal((await db.query('SELECT * FROM public.photo_v3_photos')).rows.length,0));
+    assert.equal((await db.query("SELECT * FROM storage.objects WHERE bucket_id='portfolio-v3-media'")).rows.length,4);
+    await adminCommit(db,()=>db.query('SELECT public.photo_v3_delete_series($1,(SELECT updated_at FROM public.photo_v3_collections WHERE id=$1))',[series]));
+    assert.equal((await db.query('SELECT * FROM public.photo_v3_publications WHERE draft_id=$1',[series])).rows.length,0);
+  }finally{await db.close();}
+});
+
+test('ownership migration refuses ambiguous current data without deleting content',async()=>{
+  const db=await createSeriesDatabase();
+  try{
+    const first=await newSeries(db,'First');const second=await newSeries(db,'Second');
+    await db.query(`INSERT INTO public.photo_v3_photos(id,slug,title,date_taken,alt_text,object_key)
+      VALUES($1,'ambiguous','Ambiguous','2026-11-25','Ambiguous',$2)`,[seriesPhoto,`uploads/${seriesPhoto}/display.webp`]);
+    await db.query('INSERT INTO public.photo_v3_collection_photos(collection_id,photo_id,position) VALUES($1,$3,0),($2,$3,0)',[first,second,seriesPhoto]);
+    await assert.rejects(db.exec(ownershipMigration),/Ambiguous series ownership/);
+    await db.exec('ROLLBACK');
+    assert.equal((await db.query('SELECT * FROM public.photo_v3_photos')).rows.length,1);
+    assert.equal((await db.query('SELECT * FROM public.photo_v3_collection_photos')).rows.length,2);
+    assert.equal((await db.query("SELECT * FROM information_schema.columns WHERE table_name='photo_v3_photos' AND column_name='owner_series_id'")).rows.length,0);
+  }finally{await db.close();}
+});
+
+const photoSelectionMigration = await readMigration('_allow_series_photo_selection.sql');
+test('new series selects private library photos and transfers ownership and sequence atomically',async()=>{
+  const db=await createSeriesDatabase();
+  try{
+    await db.exec(ownershipMigration);
+    await db.exec(photoSelectionMigration);
+    const source=await adminCommit(db,()=>newSeries(db,'To organize'));
+    const second='00000000-0000-4000-8000-000000000094';
+    const third='00000000-0000-4000-8000-000000000095';
+    const target='00000000-0000-4000-8000-000000000096';
+    const rejected='00000000-0000-4000-8000-000000000097';
+    await adminCommit(db,async()=>{
+      await addOwnedPhoto(db,source);
+      await addOwnedPhoto(db,source,second);
+      await addOwnedPhoto(db,source,third);
+      await db.query('UPDATE public.photo_v3_collections SET cover_photo_id=$1 WHERE id=$2',[seriesPhoto,source]);
+    });
+    const save=(id,ids,revision=null)=>db.query('SELECT public.photo_v3_save_series_draft($1,$2,$3,$4,$5,$6) AS revision',
+      [id,'Flowers','Flowers',ids,revision,ids[0]??null]);
+    await adminCommit(db,()=>save(target,[second,seriesPhoto]));
+    assert.deepEqual((await db.query('SELECT photo_id FROM public.photo_v3_collection_photos WHERE collection_id=$1 ORDER BY position',[target])).rows.map(r=>r.photo_id),[second,seriesPhoto]);
+    assert.deepEqual((await db.query('SELECT photo_id FROM public.photo_v3_collection_photos WHERE collection_id=$1',[source])).rows.map(r=>r.photo_id),[third]);
+    assert.equal((await db.query('SELECT cover_photo_id FROM public.photo_v3_collections WHERE id=$1',[source])).rows[0].cover_photo_id,null);
+    assert.equal((await db.query('SELECT count(*)::int n FROM public.photo_v3_photos WHERE owner_series_id=$1',[target])).rows[0].n,2);
+    await adminCommit(db,()=>publishSeries(db,target));
+    // One live photo rejects the entire create/save, including another private transfer.
+    await assert.rejects(adminCommit(db,()=>save(rejected,[third,seriesPhoto])),/Publish its removal/);
+    assert.equal((await db.query('SELECT owner_series_id FROM public.photo_v3_photos WHERE id=$1',[third])).rows[0].owner_series_id,source);
+    assert.equal((await db.query('SELECT * FROM public.photo_v3_collections WHERE id=$1',[rejected])).rows.length,0);
+    // Save-and-publish uses the same transfer transaction.
+    await adminCommit(db,()=>db.query('SELECT * FROM public.photo_v3_save_and_publish_draft($1,$2,$3,NULL,$4,$5,$6)',
+      [rejected,'series',[third],'More flowers','',third]));
+    await asRole(db,'anon',null,async()=>assert.equal((await db.query('SELECT * FROM public.photo_v3_photos')).rows.length,3));
+  }finally{await db.close();}
+});
+
+test('existing series adds private library photos without altering its live snapshot or accepting stale saves',async()=>{
+  const db=await createSeriesDatabase();
+  try{
+    await db.exec(ownershipMigration);await db.exec(photoSelectionMigration);
+    const target=await adminCommit(db,()=>newSeries(db,'Existing'));
+    const source=await adminCommit(db,()=>newSeries(db,'Source'));
+    const extra='00000000-0000-4000-8000-000000000094';
+    const stale='00000000-0000-4000-8000-000000000095';
+    await adminCommit(db,async()=>{
+      await addOwnedPhoto(db,target);await publishSeries(db,target);
+      await addOwnedPhoto(db,source,extra);await addOwnedPhoto(db,source,stale);
+    });
+    const revision=(await db.query('SELECT updated_at FROM public.photo_v3_collections WHERE id=$1',[target])).rows[0].updated_at;
+    await adminCommit(db,()=>db.query('SELECT public.photo_v3_save_series_draft($1,$2,$3,$4,$5,$6)',
+      [target,'Existing','',[seriesPhoto,extra],revision,seriesPhoto]));
+    assert.equal((await db.query('SELECT owner_series_id FROM public.photo_v3_photos WHERE id=$1',[extra])).rows[0].owner_series_id,target);
+    await asRole(db,'anon',null,async()=>assert.deepEqual((await db.query('SELECT id FROM public.photo_v3_photos')).rows.map(r=>r.id),[seriesPhoto]));
+    await assert.rejects(adminCommit(db,()=>db.query('SELECT public.photo_v3_save_series_draft($1,$2,$3,$4,$5,$6)',
+      [target,'Existing','',[seriesPhoto,extra,stale],revision,seriesPhoto])),/changed in another session/);
+    assert.equal((await db.query('SELECT owner_series_id FROM public.photo_v3_photos WHERE id=$1',[stale])).rows[0].owner_series_id,source);
+  }finally{await db.close();}
+});
+
+const publicViewsMigration = await readMigration('_series_public_views.sql');
+test('public placements separate Series and Archive while Selected Work accepts either and drafts stay private',async()=>{
+  const db=await createSeriesDatabase();
+  try{
+    for(const sql of [ownershipMigration,photoSelectionMigration,publicViewsMigration])await db.exec(sql);
+    const series=await adminCommit(db,()=>newSeries(db,'Flowers'));
+    const draft=await adminCommit(db,()=>newSeries(db,'Private'));
+    const second='00000000-0000-4000-8000-000000000094';
+    await adminCommit(db,async()=>{await addOwnedPhoto(db,series);await addOwnedPhoto(db,draft,second);});
+    const revision=async id=>(await db.query('SELECT updated_at FROM public.photo_v3_collections WHERE id=$1',[id])).rows[0].updated_at;
+    const place=async view=>adminCommit(db,async()=>db.query('SELECT * FROM public.photo_v3_publish_in_view($1,$2,$3)',[series,await revision(series),view]));
+    const publicSeries=async view=>asRole(db,'anon',null,()=>db.query("SELECT id FROM public.photo_v3_collections WHERE kind='series' AND public_view=$1",[view]));
+    await place('archive');
+    assert.equal((await publicSeries('archive')).rows.length,1);
+    assert.equal((await publicSeries('series')).rows.length,0);
+    await asRole(db,'anon',null,async()=>{
+      assert.deepEqual((await db.query('SELECT id FROM public.photo_v3_photos')).rows.map(r=>r.id),[seriesPhoto]);
+      assert.equal((await db.query('SELECT * FROM storage.objects')).rows.length,2);
+    });
+    const selected=(await db.query("SELECT * FROM public.photo_v3_collections WHERE slug='selected-work'")).rows[0];
+    await adminCommit(db,()=>db.query('SELECT * FROM public.photo_v3_save_and_publish_draft($1,$2,$3,$4)',[selected.id,'selected',[seriesPhoto],selected.updated_at]));
+    await asRole(db,'anon',null,async()=>assert.equal((await db.query("SELECT * FROM public.photo_v3_collection_photos m JOIN public.photo_v3_collections c ON c.id=m.collection_id WHERE c.kind='selected'")).rows.length,1));
+    await place('series');
+    assert.equal((await publicSeries('archive')).rows.length,0);
+    assert.equal((await publicSeries('series')).rows.length,1);
+    await place('archive');
+    // Archive updates save, transfer private photos and snapshot atomically.
+    await adminCommit(db,async()=>db.query('SELECT * FROM public.photo_v3_save_and_publish_in_view($1,$2,$3,$4,$5,$6,$7)',
+      [series,[seriesPhoto,second],'Flowers','Updated',seriesPhoto,await revision(series),'archive']));
+    await asRole(db,'anon',null,async()=>assert.equal((await db.query('SELECT * FROM public.photo_v3_photos')).rows.length,2));
+    const before=await revision(series);
+    await assert.rejects(adminCommit(db,()=>db.query('SELECT * FROM public.photo_v3_save_and_publish_in_view($1,$2,$3,$4,$5,$6,$7)',
+      [series,[seriesPhoto],'Wrong','',seriesPhoto,before,'unknown'])),/Unknown public view/);
+    assert.deepEqual(await revision(series),before);
+    // Future placements require a catalog entry, without an ownership/RLS change.
+    await db.exec("INSERT INTO public.photo_v3_public_views VALUES('projects','Projects')");
+    await place('projects');
+    assert.equal((await publicSeries('projects')).rows.length,1);
+    await asRole(db,'anon',null,async()=>assert.equal((await db.query('SELECT * FROM public.photo_v3_photos')).rows.length,2));
+    const live=(await db.query('SELECT c.updated_at FROM public.photo_v3_publications p JOIN public.photo_v3_collections c ON c.id=p.live_id WHERE p.draft_id=$1',[series])).rows[0];
+    await adminCommit(db,()=>db.query('SELECT * FROM public.photo_v3_unpublish_draft($1,$2)',[series,live.updated_at]));
+    await asRole(db,'anon',null,async()=>{
+      assert.equal((await db.query('SELECT * FROM public.photo_v3_photos')).rows.length,0);
+      assert.equal((await db.query('SELECT * FROM storage.objects')).rows.length,0);
+      assert.equal((await db.query('SELECT * FROM public.photo_v3_collection_photos')).rows.length,0);
+    });
+    const selectedRevision=await revision(selected.id);
+    await assert.rejects(adminCommit(db,()=>db.query('SELECT * FROM public.photo_v3_save_and_publish_draft($1,$2,$3,$4)',[selected.id,'selected',[seriesPhoto],selectedRevision])),/published series/);
+    for(const [role,user] of [['anon',null],['authenticated',otherUser]]){
+      await assert.rejects(asRole(db,role,user,()=>db.query('SELECT * FROM public.photo_v3_publish_in_view($1,now(),$2)',[series,'archive'])),/permission denied|Administrator access required/);
+      await assert.rejects(asRole(db,role,user,()=>db.exec("INSERT INTO public.photo_v3_public_views VALUES('intruder','Intruder')")),/permission denied/);
+    }
+  }finally{await db.close();}
+});

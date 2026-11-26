@@ -13,37 +13,27 @@ import PhotoLocationField from "./PhotoLocationField";
 import admin from "../admin.module.css";
 import styles from "../bulk-upload.module.css";
 
-export default function BulkPhotoUploadForm({ locations }: { locations: string[] }) {
-  const { items, setItems, addFiles, remove, save, saving, progress, saveError, authenticationRequired } = useUploadReview();
+export default function BulkPhotoUploadForm({ locations, seriesId }: { locations: string[]; seriesId: string }) {
+  const { items, setItems, addFiles, remove, save, saving, progress, saveError, authenticationRequired } = useUploadReview(seriesId);
   const section = useRef<HTMLElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const shared = useRef<HTMLFieldSetElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
-  const publishDialog = useRef<HTMLDialogElement>(null);
-  const [confirmation, setConfirmation] = useState<"publish" | "retry" | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [sharedDate, setSharedDate] = useState("");
   const [sharedLocation, setSharedLocation] = useState("");
   const [notice, setNotice] = useState("");
   const guardNavigation = useUnsavedChanges(items.some((item) => !item.stored || item.status === "failed"), saving);
-  const dragging = usePhotoDrop(section, !saving && !confirmation, addFiles);
+  const dragging = usePhotoDrop(section, !saving, addFiles);
   const editable = items.filter((item) => !item.attempted);
   const selected = editable.filter((item) => item.selected).length;
   const saved = items.filter((item) => item.stored && !item.published).length;
-  const published = items.filter((item) => item.published).length;
-  const publishable = items.filter((item) => !item.published && ["ready", "saved", "failed"].includes(item.status));
-  const confirmationCount = confirmation === "retry" ? items.filter((item) => item.status === "failed" && item.intent === "publish").length : publishable.length;
   const failed = items.filter((item) => item.status === "failed").length;
-  const canSave = items.some((item) => item.status === "ready" || (item.status === "failed" && item.intent !== "publish"));
+  const canSave = items.some((item) => item.status === "ready" || (item.status === "failed"));
   const ready = items.filter((item) => item.status === "ready" && normalizePhotoDetails(item.details).ok).length;
   const preparing = items.filter((item) => item.status === "queued" || item.status === "preparing").length;
   const preview = items.find((item) => item.id === previewId);
   const allExpanded = items.length > 0 && items.every((item) => item.expanded);
-
-  function confirmPublish(mode: "publish" | "retry") {
-    setConfirmation(mode);
-    publishDialog.current?.showModal();
-  }
 
   function change(id: string, field: keyof PhotoDetails, value: string) {
     if (saving) return;
@@ -64,10 +54,11 @@ export default function BulkPhotoUploadForm({ locations }: { locations: string[]
       <button type="button" disabled={saving} className={`${admin.actionButton} ${admin.primary}`} onClick={() => picker.current?.click()}>Add photos</button>
     </header>
     <div className={admin.draftBar}>
+      <Link className={admin.textLink} href={`/photo/admin/series/${seriesId}`} onNavigate={guardNavigation}>Open series</Link>
       <Link className={admin.textLink} href={adminPhotosPath} onNavigate={guardNavigation}>← Photos</Link>
-      <Link className={admin.textLink} href={`${adminPhotosPath}/new`} onNavigate={guardNavigation}>Single-photo upload</Link>
+      <Link className={admin.textLink} href={`${adminPhotosPath}/new?seriesId=${seriesId}`} onNavigate={guardNavigation}>Single-photo upload</Link>
     </div>
-    <p className={styles.checkpoint}>Review your photos, then save private drafts or publish them to Archive. Submitted details stay locked; edit saved photos through their editor links. Leaving clears unsaved items from this page.</p>
+    <p className={styles.checkpoint}>Review your photos, then save them privately to this series. Publish the sequence from its series editor. Submitted details stay locked; edit saved photos through their editor links. Leaving clears unsaved items from this page.</p>
     <input ref={picker} type="file" multiple accept="image/jpeg,image/png,image/webp" aria-label="Photo files" hidden disabled={saving}
       onChange={(event) => { if (event.currentTarget.files?.length) addFiles(event.currentTarget.files); event.currentTarget.value = ""; }} />
     {!items.length ? <div className={admin.uploadEmpty}>
@@ -104,9 +95,9 @@ export default function BulkPhotoUploadForm({ locations }: { locations: string[]
         {items.map((item) => {
           const validation = normalizePhotoDetails(item.details);
           const status = item.status === "error" ? "Couldn’t prepare" : item.status === "queued" ? "Waiting to prepare"
-            : item.status === "preparing" ? "Preparing…" : item.status === "saving" ? item.intent === "publish" ? "Publishing…" : "Saving…"
-              : item.status === "published" ? "Published" : item.status === "saved" ? "Saved"
-                : item.status === "failed" ? item.intent === "publish" ? "Publish failed" : "Save failed" : validation.ok ? "Ready" : "Needs details";
+            : item.status === "preparing" ? "Preparing…" : item.status === "saving" ? "Saving…"
+              : item.status === "saved" ? "Saved"
+                : item.status === "failed" ? "Save failed" : validation.ok ? "Ready" : "Needs details";
           return <li key={item.id} className={styles.item}>
             <div className={styles.row}>
               <div className={styles.photo}>
@@ -146,30 +137,13 @@ export default function BulkPhotoUploadForm({ locations }: { locations: string[]
         })}
       </ol>
       <footer className={styles.footer}>
-        <span role="status">{saving ? `${progress.mode === "publish" ? "Publishing" : "Saving"} ${progress.position} of ${progress.total} · ` : ""}{published} published · {saved} drafts · {failed} failed · {ready} ready{preparing > 0 ? ` · ${preparing} preparing` : ""}</span>
+        <span role="status">{saving ? `Saving ${progress.position} of ${progress.total} · ` : ""}{saved} drafts · {failed} failed · {ready} ready{preparing > 0 ? ` · ${preparing} preparing` : ""}</span>
         <div className={admin.actions}>
-          {failed > 0 && <button type="button" disabled={saving} onClick={() => {
-            if (items.some((item) => item.status === "failed" && item.intent === "publish")) confirmPublish("retry");
-            else void save("retry");
-          }}>Retry failed</button>}
-          <button type="button" disabled={saving || preparing > 0 || !canSave} onClick={() => void save()}>Save drafts</button>
-          <button type="button" className={admin.primary} disabled={saving || preparing > 0 || !publishable.length} onClick={() => confirmPublish("publish")}>Publish photos</button>
+          {failed > 0 && <button type="button" disabled={saving} onClick={() => void save("retry")}>Retry failed</button>}
+          <button type="button" disabled={saving || preparing > 0 || !canSave} onClick={() => void save()}>Save to series</button>
         </div>
       </footer>
     </>}
-    <dialog ref={publishDialog} className={admin.publishDialog} aria-labelledby="batch-publish-title" onClose={() => setConfirmation(null)}>
-      <h2 id="batch-publish-title">Publish {confirmationCount} {confirmationCount === 1 ? "photo" : "photos"}?</h2>
-      <p>These photos will become public in Archive and can be included in published Series. Saved drafts will use their existing images.</p>
-      {confirmation === "retry" && <p>This retries failed publications and any failed draft saves. Successful photos are skipped.</p>}
-      <div className={admin.actions}>
-        <button type="button" onClick={() => publishDialog.current?.close()}>Cancel</button>
-        <button type="button" className={admin.primary} onClick={() => {
-          const mode = confirmation ?? "publish";
-          publishDialog.current?.close();
-          void save(mode);
-        }}>Publish {confirmationCount} {confirmationCount === 1 ? "photo" : "photos"}</button>
-      </div>
-    </dialog>
     <dialog ref={dialog} className={styles.preview} onClose={() => setPreviewId(null)}
       onClick={(event) => {
         if (event.target !== event.currentTarget) return;

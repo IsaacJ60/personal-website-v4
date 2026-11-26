@@ -16,7 +16,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || !format) return reply("Photo unavailable.", 404);
   try {
     const { data: photo, error } = await createPublicPortfolioClient().from("photo_v3_photos")
-      .select("slug,title,object_key").eq("id", id).eq("published", true).maybeSingle();
+      .select("slug,title,object_key").eq("id", id).maybeSingle();
     if (error) throw error;
     if (!photo) return reply("Photo unavailable.", 404);
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(50000)]);
@@ -24,7 +24,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       // Vercel returns only the redirect. R2 serves the stored image bytes directly.
       const url = await fullSizePhotoUrl(photo.object_key, signal);
       return new Response(null, { status: 302, headers: {
-        ...headers, Location: url, "Cache-Control": "public, max-age=300, s-maxage=300",
+        ...headers, Location: url,
       } });
     }
     if (photo.object_key.startsWith("uploads/") && !await findUploadedOriginal(id)) {

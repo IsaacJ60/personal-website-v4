@@ -25,9 +25,13 @@ export async function POST(request: Request) {
   try { form = await request.formData(); } catch { return fail("Choose a photo and try again.", 400); }
   const rawId = form.get("id");
   const file = form.get("image");
-  const mode = form.get("mode") ?? "draft";
-  if (mode !== "draft" && mode !== "publish") return fail("Choose whether to save a draft or publish the photo.", 400);
-  const publish = mode === "publish";
+  const owner = form.get("seriesId");
+  if (form.has("mode") || typeof owner !== "string" || !portfolioUuid.test(owner)) return fail("Choose a destination series before uploading.", 400);
+  const seriesId = owner.toLowerCase();
+  const destination = await client.from("photo_v3_collections").select("id").eq("id", seriesId)
+    .eq("kind", "series").eq("published", false).eq("is_public_copy", false).maybeSingle();
+  if (destination.error) return fail("Couldn’t check the destination series. Retry saving.", 503);
+  if (!destination.data) return fail("Choose an editable destination series.", 400);
   if (typeof rawId !== "string" || !portfolioUuid.test(rawId) || !(file instanceof File)) {
     return fail("Choose a photo and try again.", 400);
   }
@@ -44,22 +48,19 @@ export async function POST(request: Request) {
   const displayKey = uploadedPhotoKey(id);
   const thumbnailKey = uploadedPhotoKey(id, "thumbnail");
   function complete(photo: { id: string; slug: string; published: boolean }, status: number) {
-    if (publish && !photo.published) return Response.json({
-      error: "This upload was already saved as a draft.",
-      existingDraftId: photo.id,
-    }, { status: 409, headers: { "Cache-Control": "no-store" } });
-    if (photo.published) revalidatePath("/photo", "layout");
-    else revalidatePath("/photo/admin/photos");
+    revalidatePath("/photo/admin/photos");
+    revalidatePath("/photo/admin/series");
+    revalidatePath(`/photo/admin/series/${seriesId}`);
     return Response.json({ id: photo.id, slug: photo.slug, published: photo.published }, {
       status, headers: { "Cache-Control": "no-store" },
     });
   }
 
-  const findPhoto = () => client.from("photo_v3_photos").select("id,slug,published,object_key").eq("id", id).maybeSingle();
+  const findPhoto = () => client.from("photo_v3_photos").select("id,slug,owner_series_id,object_key").eq("id", id).maybeSingle();
   const existing = await findPhoto();
   if (existing.error) return fail("Couldn’t check this upload. Try again.", 503);
-  if (existing.data) return existing.data.object_key === displayKey
-    ? complete(existing.data, 200)
+  if (existing.data) return existing.data.object_key === displayKey && existing.data.owner_series_id === seriesId
+    ? complete({ ...existing.data, published: false }, 200)
     : fail("Choose the file again to start a new upload.", 409);
 
   // Never commit a new photo if its untouched original has not reached private R2.
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
 
   const storage = client.storage.from(photoMediaBucket);
   async function storeDerivative(path: string, bytes: Buffer) {
-    const { error } = await storage.upload(path, bytes, { contentType: "image/webp", upsert: false });
+    const { error } = await storage.upload(path, bytes, { contentType: "image/webp", cacheControl: "60", upsert: false });
     if (!error) return true;
     // A retry can find a variant written before an earlier request was interrupted.
     // Reuse only the same bytes, so the upload cannot replace an existing image.
@@ -96,12 +97,12 @@ export async function POST(request: Request) {
   const slug = `${name}-${id.slice(0, 12)}`;
   const { error } = await client.from("photo_v3_photos").insert({
     id, slug, object_key: displayKey, ...metadata.columns,
-    image_width: images.width, image_height: images.height, published: publish,
+    image_width: images.width, image_height: images.height, owner_series_id: seriesId,
   });
   if (error) {
     const retry = await findPhoto();
-    if (retry.data?.object_key === displayKey) return complete(retry.data, 200);
+    if (retry.data?.object_key === displayKey && retry.data.owner_series_id === seriesId) return complete({ ...retry.data, published: false }, 200);
     return fail("Couldn’t save the photo. Try this upload again.", 503);
   }
-  return complete({ id, slug, published: publish }, 201);
+  return complete({ id, slug, published: false }, 201);
 }

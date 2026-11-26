@@ -13,12 +13,12 @@
 .detailsFields { display: grid; gap: 16px; min-width: 0; max-width: 600px; margin: 0 0 32px; padding: 0; border: 0; }
 .detailsFields label { display: grid; gap: 6px; font-size: 13px; }
 .detailsFields small { color: var(--muted); font-size: inherit; }
-.detailsFields input, .detailsFields textarea {
+.detailsFields input, .detailsFields textarea, .detailsFields select, .draftBar select {
   width: 100%; border: 1px solid var(--rule); border-radius: 3px; background: var(--paper); color: var(--ink);
   padding: 9px 12px; font: inherit;
 }
 .detailsFields textarea { resize: vertical; }
-.editor .detailsFields :is(input, textarea):focus { outline: none; border-bottom-color: var(--focus); box-shadow: inset 0 -1px 0 var(--focus); }
+.editor .detailsFields :is(input, textarea, select):focus { outline: none; border-bottom-color: var(--focus); box-shadow: inset 0 -1px 0 var(--focus); }
 .detailsFields legend { font-size: 15px; margin-bottom: 12px; padding: 0; }
 .locationField { display: grid; gap: 6px; min-width: 0; font-size: 13px; }
 .locationControl { position: relative; }
@@ -89,8 +89,8 @@
 .libraryView { display: inline-flex; gap: 4px; }
 .editor .libraryView button { padding: 5px 9px; }
 .editor .libraryView button[aria-pressed="true"] { background: var(--surface-active); border-color: var(--link-rule); }
-.search input, .login input { display: block; width: 100%; background: transparent; color: var(--ink); border: 0; border-bottom: 1px solid var(--rule); padding: 12px 0; border-radius: 0; }
-.editor .search input:focus { outline: none; border-bottom-color: var(--focus); box-shadow: inset 0 -1px 0 var(--focus); }
+.search input, .search select, .login input { display: block; width: 100%; background: transparent; color: var(--ink); border: 0; border-bottom: 1px solid var(--rule); padding: 12px 0; border-radius: 0; }
+.editor .search :is(input, select):focus { outline: none; border-bottom-color: var(--focus); box-shadow: inset 0 -1px 0 var(--focus); }
 .photoGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px 16px; }
 .photoGrid.compactGrid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px 12px; }
 .compactGrid .photoTitle, .compactGrid .meta { overflow-wrap: anywhere; }

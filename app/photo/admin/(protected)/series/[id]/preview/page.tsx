@@ -16,7 +16,7 @@ export default async function SeriesTilePreview({ params }: { params: Promise<{ 
       <Link className={adminStyles.textLink} href={editor}>← Back to editor</Link>
       <span>Private preview</span>
       {cover && <PublishDraft id={id} title={draft.title} revision={draft.revision}
-        publication={publication} hasPrivatePhotos={photos.some((photo) => !photo.published)} />}
+        publication={publication} hasPrivatePhotos={false} isSeries />}
     </div>
     <PortfolioPageHeader id="series-preview" title="Series" />
     {cover ? <div className={styles.seriesGrid}>

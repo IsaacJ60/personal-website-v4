@@ -12,11 +12,11 @@ export type UploadReviewItem = {
   details: PhotoDetails;
   selected: boolean;
   expanded: boolean;
-  status: "queued" | "preparing" | "ready" | "error" | "saving" | "saved" | "published" | "failed";
+  status: "queued" | "preparing" | "ready" | "error" | "saving" | "saved" | "failed";
   stored?: boolean;
   published?: boolean;
   slug?: string;
-  intent?: "draft" | "publish";
+  intent?: "draft";
   attempted?: boolean;
   image?: Blob;
   original?: File;
@@ -24,7 +24,7 @@ export type UploadReviewItem = {
   error?: string;
 };
 
-export function useUploadReview() {
+export function useUploadReview(seriesId: string) {
   const [items, setItems] = useState<UploadReviewItem[]>([]);
   const jobs = useRef<{ id: string; file: File }[]>([]);
   const live = useRef(new Set<string>());
@@ -32,7 +32,7 @@ export function useUploadReview() {
   const busy = useRef(false);
   const upload = useRef<AbortController | null>(null);
   const [saving, setSaving] = useState(false);
-  const [progress, setProgress] = useState<{ position: number; total: number; mode: "draft" | "publish" }>({ position: 0, total: 0, mode: "draft" });
+  const [progress, setProgress] = useState<{ position: number; total: number; mode: "draft" }>({ position: 0, total: 0, mode: "draft" });
   const [saveError, setSaveError] = useState("");
   const [authenticationRequired, setAuthenticationRequired] = useState(false);
 
@@ -98,11 +98,10 @@ export function useUploadReview() {
     setItems((current) => current.filter((item) => item.id !== id));
   }
 
-  async function save(mode: "draft" | "publish" | "retry" = "draft") {
+  async function save(mode: "draft" | "retry" = "draft") {
     if (upload.current) return;
     const candidates = items.filter((item) => mode === "retry" ? item.status === "failed"
-      : mode === "publish" ? !item.published && ["ready", "saved", "failed"].includes(item.status)
-        : item.status === "ready" || (item.status === "failed" && item.intent !== "publish"));
+      : item.status === "ready" || item.status === "failed");
     if (!candidates.length) return;
     const invalid = candidates.find((item) => !normalizePhotoDetails(item.details).ok);
     if (invalid) {
@@ -114,11 +113,12 @@ export function useUploadReview() {
     setSaving(true);
     setSaveError("");
     setAuthenticationRequired(false);
-    setProgress({ position: 0, total: candidates.length, mode: mode === "publish" ? "publish" : "draft" });
+    setProgress({ position: 0, total: candidates.length, mode: "draft" });
     try {
       const result = await savePhotoBatch(candidates.map((item) => ({ id: item.id, image: item.image, original: item.original, stored: item.stored, slug: item.slug,
-        published: item.published, mode: mode === "retry" ? item.intent : mode, details: { ...item.details } })), {
+        published: item.published, details: { ...item.details } })), {
         signal: controller.signal,
+        seriesId,
         onStart: (id, position, intent) => {
           setProgress({ position, total: candidates.length, mode: intent });
           setItems((current) => current.map((item) => item.id === id ? { ...item, intent, attempted: true, selected: false, status: "saving", error: undefined } : item));
@@ -130,7 +130,7 @@ export function useUploadReview() {
         onSaved: (id, photo) => {
           if (!live.current.has(id)) return;
           setItems((current) => current.map((item) => item.id === id
-            ? { ...item, stored: true, published: photo.published, slug: photo.slug, status: photo.published ? "published" : "saved", image: undefined, original: undefined } : item));
+            ? { ...item, stored: true, published: photo.published, slug: photo.slug, status: "saved", image: undefined, original: undefined } : item));
         },
         onFailed: (id, error) => {
           if (!live.current.has(id)) return;

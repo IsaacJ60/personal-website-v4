@@ -4,27 +4,27 @@ import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ExternalLink } from "lucide-react";
-import { deletePhoto, savePhotoDetails } from "@/app/photo/admin/photo-actions";
+import { deletePhoto, movePhoto, savePhotoDetails } from "@/app/photo/admin/photo-actions";
 import { useUnsavedChanges } from "../lib/use-unsaved-changes";
 import type { AdminPortfolioPhoto, PhotoDetails } from "../types";
 import PortfolioImage from "./PortfolioImage";
 import PhotoDetailsFields from "./PhotoDetailsFields";
-import PhotoPublishDialog from "./PhotoPublishDialog";
 import styles from "../admin.module.css";
 
-export default function PhotoDetailsEditor({ photo, initialDetails, initialRevision, backHref, locations }: {
+export default function PhotoDetailsEditor({ photo, initialDetails, initialRevision, backHref, locations, series }: {
   photo: AdminPortfolioPhoto;
   initialDetails: PhotoDetails;
   initialRevision: string;
   backHref: string;
   locations: string[];
+  series: { id: string; title: string }[];
 }) {
   const router = useRouter();
   const [details, setDetails] = useState(initialDetails);
   const [saved, setSaved] = useState(initialDetails);
   const [revision, setRevision] = useState(initialRevision);
-  const [published, setPublished] = useState(photo.published);
-  const publishDialog = useRef<HTMLDialogElement>(null);
+  const published = photo.published;
+  const [destination, setDestination] = useState(photo.ownerSeriesId);
   const deleteDialog = useRef<HTMLDialogElement>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
@@ -39,12 +39,12 @@ export default function PhotoDetailsEditor({ photo, initialDetails, initialRevis
     setDetails((current) => ({ ...current, [field]: value }));
   }
 
-  function save(publish = false) {
-    if ((!dirty && !publish) || pending) return;
+  function save() {
+    if (!dirty || pending) return;
     setNotice(null);
     startTransition(async () => {
       try {
-        const result = await savePhotoDetails(photo.id, revision, details, publish);
+        const result = await savePhotoDetails(photo.id, revision, details);
         if (!result.ok) {
           setNotice({ text: result.message, error: true });
           return;
@@ -52,9 +52,7 @@ export default function PhotoDetailsEditor({ photo, initialDetails, initialRevis
         setSaved(result.details);
         setDetails(result.details);
         setRevision(result.revision);
-        setPublished(result.published);
-        if (publish) publishDialog.current?.close();
-        setNotice({ text: publish ? "Photo published." : "Photo details saved." });
+        setNotice({ text: "Photo details saved." });
       } catch {
         setNotice({ text: "Couldn’t save the photo details. Your changes are still here.", error: true });
       }
@@ -90,7 +88,7 @@ export default function PhotoDetailsEditor({ photo, initialDetails, initialRevis
           <p className={styles.eyebrow}>Portfolio admin</p>
           <div className={styles.photoEditorTitle}>
             <h1>Edit photo</h1>
-            {published && <span className={styles.publicationBadge}>Published</span>}
+            {published && <span className={styles.publicationBadge}>Public</span>}
           </div>
         </div>
         <div className={styles.actions}>
@@ -103,13 +101,6 @@ export default function PhotoDetailsEditor({ photo, initialDetails, initialRevis
               New tab <ExternalLink size={13} aria-hidden="true" />
             </Link>
           </>}
-          {photo.uploaded && !published && <button type="button" className={styles.actionButton} disabled={pending}
-            onClick={(event) => {
-              if (event.currentTarget.form?.reportValidity()) {
-                setNotice(null);
-                publishDialog.current?.showModal();
-              }
-            }}>{dirty ? "Save & publish" : "Publish photo"}</button>}
           <button className={`${styles.actionButton} ${styles.primary}`} disabled={!dirty || pending}>
             {pending && !deleting ? "Saving…" : "Save changes"}
           </button>
@@ -118,6 +109,20 @@ export default function PhotoDetailsEditor({ photo, initialDetails, initialRevis
       <div className={styles.draftBar}>
         <Link className={styles.textLink} href={backHref} onNavigate={guardNavigation}>← Photos</Link>
         <span role={notice?.error ? "alert" : "status"}>{notice?.text || (dirty ? "Unsaved changes" : "")}</span>
+      </div>
+      <div className={styles.draftBar}>
+        <Link className={styles.textLink} href={`/photo/admin/series/${photo.ownerSeriesId}`} onNavigate={guardNavigation}>Series: {photo.ownerSeriesTitle}</Link>
+        <label>Move to series <select value={destination} disabled={pending || dirty || published}
+          onChange={(event) => setDestination(event.target.value)}>
+          {series.map((row) => <option key={row.id} value={row.id}>{row.title}</option>)}
+        </select></label>
+        <button type="button" className={styles.actionButton} disabled={pending || dirty || published || destination === photo.ownerSeriesId}
+          onClick={() => startTransition(async () => {
+            const result = await movePhoto(photo.id, revision, destination);
+            if (!result.ok) setNotice({ text: result.message, error: true });
+            else router.refresh();
+          })}>Move photo</button>
+        {published && <span>Publish its removal or make its series private before moving.</span>}
       </div>
       <div className={styles.photoEditLayout}>
         <div className={styles.photoEditImage}>
@@ -129,9 +134,6 @@ export default function PhotoDetailsEditor({ photo, initialDetails, initialRevis
           </PhotoDetailsFields>
         </div>
       </div>
-      {photo.uploaded && <PhotoPublishDialog dialog={publishDialog} title={details.title}
-        label={dirty ? "Save & publish" : "Publish photo"} pending={pending}
-        error={notice?.error ? notice.text : undefined} onPublish={() => save(true)} />}
       <dialog ref={deleteDialog} className={styles.publishDialog} aria-labelledby="delete-photo-title"
         onCancel={(event) => { if (pending) event.preventDefault(); }}>
         <h2 id="delete-photo-title">Delete {saved.title}?</h2>

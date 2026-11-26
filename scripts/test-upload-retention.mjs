@@ -26,14 +26,19 @@ registerHooks({ resolve(specifier, context, next) {
 } });
 const { POST } = await import('../app/api/photo-preview/upload/route.ts');
 const id = '00000000-0000-4000-8000-000000000001';
+const seriesId='00000000-0000-4000-8000-000000000099';
 const hash = 'a'.repeat(64);
 const image = await sharp({ create: { width: 1600, height: 1200, channels: 3, background: '#334455' } }).webp().toBuffer();
 
 function fixture(original = { ContentLength: 100, ContentType: 'image/jpeg', Metadata: { sha256: hash } }) {
-  const state = { original, derivativeWrites: 0, inserts: [], originalError: false };
+  const state = { existing: null, destination: true, original, derivativeWrites: 0, inserts: [], originalError: false };
   state.client = {
-    from(table) { assert.equal(table, "photo_v3_photos"); return {
-      select() { return { eq() { return { async maybeSingle() { return { data: null, error: null }; } }; } }; },
+    from(table) { return {
+      select() { const query={ eq() {return query;}, async maybeSingle() {
+        if(table==='photo_v3_collections') return {data: state.destination ? {id:seriesId}:null,error:null};
+        assert.equal(table,'photo_v3_photos');
+        return {data:state.existing,error:null};
+      }};return query; },
       async insert(row) { state.inserts.push(row); return { error: null }; },
     }; },
     storage: { from(bucket) { assert.equal(bucket, "portfolio-v3-media"); return { async upload() { state.derivativeWrites++; return { error: null }; } }; } },
@@ -41,20 +46,19 @@ function fixture(original = { ContentLength: 100, ContentType: 'image/jpeg', Met
   globalThis.uploadRetentionState = state;
   return state;
 }
-function request(sha = hash, mode = 'draft') {
+function request(sha = hash, owner = seriesId, mode) {
   const body = new FormData();
   body.set('id', id); body.set('title', 'Original retention test'); body.set('date', '2026-11-23');
   body.set('image', new File([image], 'display.webp', { type: 'image/webp' }));
-  body.set('mode', mode);
+  if(owner!==null)body.set('seriesId',owner);
+  if(mode)body.set('mode',mode);
   if (sha !== null) body.set('originalSha256', sha);
   return new Request('http://localhost:3000/api/photo-preview/upload', { method: 'POST', body });
 }
 
-test('missing original rejects both draft and publish before writing derivatives or rows', async () => {
-  for (const mode of ['draft', 'publish']) {
-    const state = fixture(null); const response = await POST(request(hash, mode));
-    assert.equal(response.status, 409); assert.equal(state.derivativeWrites, 0); assert.deepEqual(state.inserts, []);
-  }
+test('missing original rejects a series upload before writing derivatives or rows', async () => {
+  const state = fixture(null); const response = await POST(request());
+  assert.equal(response.status, 409); assert.equal(state.derivativeWrites, 0); assert.deepEqual(state.inserts, []);
 });
 test('mismatched or missing digest cannot commit a photo', async () => {
   for (const digest of ['b'.repeat(64), null]) {
@@ -71,5 +75,22 @@ test('verified original allows both derivatives and the catalog row to be saved'
   const state = fixture(); const response = await POST(request());
   assert.equal(response.status, 201); assert.equal(state.derivativeWrites, 2); assert.equal(state.inserts.length, 1);
   assert.equal(state.inserts[0].object_key, `uploads/${id}/display.webp`);
-  assert.equal(state.inserts[0].published, false);
+  assert.equal(state.inserts[0].published, undefined);
+  assert.equal(state.inserts[0].owner_series_id, seriesId);
+});
+
+test('missing or invalid destination and legacy publication modes cannot create photos',async()=>{
+  for (const [owner,mode] of [[null,undefined],['invalid',undefined],[seriesId,'publish'],[seriesId,'draft']]) {
+    const state=fixture();const response=await POST(request(hash,owner,mode));
+    assert.equal(response.status,400);assert.equal(state.derivativeWrites,0);assert.equal(state.inserts.length,0);
+  }
+  const state=fixture();state.destination=false;
+  assert.equal((await POST(request())).status,400);
+});
+test('interrupted finalization reuses only a photo with the same owner and immutable media key',async()=>{
+  const state=fixture();state.existing={id,slug:'saved',object_key:`uploads/${id}/display.webp`,owner_series_id:seriesId};
+  assert.equal((await POST(request())).status,200);
+  assert.equal(state.derivativeWrites,0);assert.equal(state.inserts.length,0);
+  state.existing.owner_series_id='00000000-0000-4000-8000-000000000098';
+  assert.equal((await POST(request())).status,409);
 });

@@ -37,14 +37,15 @@ export async function deletePhoto(id: string, revision: string): Promise<{ ok: t
   if (error) return { ok: false, message: "Couldn’t delete this photo. Try again." };
   if (!data) return { ok: false, message: "This photo changed or was already removed. Reload before deleting." };
   revalidatePath("/photo", "layout");
+  revalidatePath("/sitemap.xml");
   // Metadata deletion is complete even if storage is down. The Photos page
   // exposes pending tasks so cleanup can be retried after reload or sign-in.
   try { await retryPhotoMediaCleanup(id); } catch { /* Keep the durable task. */ }
   return { ok: true };
 }
 
-export async function savePhotoDetails(id: string, revision: string, fields: PhotoDetails, publish = false): Promise<
-  { ok: true; revision: string; details: PhotoDetails; published: boolean } | { ok: false; message: string }
+export async function savePhotoDetails(id: string, revision: string, fields: PhotoDetails): Promise<
+  { ok: true; revision: string; details: PhotoDetails } | { ok: false; message: string }
 > {
   const client = await requirePortfolioAdmin();
   if (typeof id !== "string" || !portfolioUuid.test(id) || typeof revision !== "string" || !Number.isFinite(Date.parse(revision))) {
@@ -52,22 +53,30 @@ export async function savePhotoDetails(id: string, revision: string, fields: Pho
   }
   const metadata = normalizePhotoDetails(fields);
   if (!metadata.ok) return metadata;
-  const makePublic = publish === true;
-  const displayKey = uploadedPhotoKey(id);
-  if (makePublic) {
-    const storage = client.storage.from(photoMediaBucket);
-    const files = await Promise.all([storage.exists(displayKey), storage.exists(uploadedPhotoKey(id, "thumbnail"))]);
-    if (files.some((file) => file.error || !file.data)) return { ok: false, message: "Both image sizes must be available before publishing." };
-  }
-  let query = client.from("photo_v3_photos").update(makePublic ? { ...metadata.columns, published: true } : metadata.columns)
-    .eq("id", id).eq("updated_at", revision);
-  if (makePublic) query = query.eq("object_key", displayKey).eq("published", false);
-  const { data, error } = await query.select("updated_at,published").maybeSingle();
+  const { data, error } = await client.from("photo_v3_photos").update(metadata.columns)
+    .eq("id", id).eq("updated_at", revision).select("updated_at").maybeSingle();
 
   if (error) return { ok: false, message: "Couldn’t save the photo details. Your changes are still here." };
   if (!data) return { ok: false, message: "This photo changed or was removed. Reload before saving again." };
 
   // The same photo can appear in every public section and in multiple curation drafts.
   revalidatePath("/photo", "layout");
-  return { ok: true, revision: data.updated_at, details: metadata.details, published: data.published };
+  revalidatePath("/sitemap.xml");
+  return { ok: true, revision: data.updated_at, details: metadata.details };
+}
+
+export async function movePhoto(id: string, revision: string, seriesId: string) {
+  const client = await requirePortfolioAdmin();
+  if (!portfolioUuid.test(id) || !portfolioUuid.test(seriesId) || !Number.isFinite(Date.parse(revision))) {
+    return { ok: false as const, message: "Reload before moving this photo." };
+  }
+  const { error } = await client.rpc("photo_v3_move_photo", {
+    p_photo_id: id, p_series_id: seriesId, p_expected_updated_at: revision,
+  });
+  if (error) return { ok: false as const, message: error.code === "40001"
+    ? "This photo changed. Reload before moving."
+    : "Publish its removal or make its series private before moving. Choose an editable destination series." };
+  revalidatePath("/photo", "layout");
+  revalidatePath("/sitemap.xml");
+  return { ok: true as const };
 }

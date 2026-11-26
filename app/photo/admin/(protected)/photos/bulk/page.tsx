@@ -1,6 +1,6 @@
-import BulkPhotoUploadForm from "@/features/photo-portfolio/components/BulkPhotoUploadForm";
-import { getPhotoLocations } from "@/features/photo-portfolio/data/admin";
+import UploadWorkspace from "@/features/photo-portfolio/components/UploadWorkspace";
 
-export default async function BulkPhotoPage() {
-  return <BulkPhotoUploadForm locations={await getPhotoLocations()} />;
+export default async function UploadPage({ searchParams }: { searchParams: Promise<{ seriesId?: string }> }) {
+  const { seriesId } = await searchParams;
+  return <UploadWorkspace seriesId={seriesId} bulk />;
 }

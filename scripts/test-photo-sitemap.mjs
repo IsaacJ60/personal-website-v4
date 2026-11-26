@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { portfolioSitemap } from '../features/photo-portfolio/lib/sitemap.ts';
+import { registerHooks } from 'node:module';
+registerHooks({resolve(specifier,context,next){
+  try{return next(specifier,context);}catch(error){
+    if(error.code==='ERR_MODULE_NOT_FOUND' && specifier.startsWith('.'))return next(`${specifier}.ts`,context);
+    throw error;
+  }
+}});
+const {portfolioSitemap}=await import('../features/photo-portfolio/lib/sitemap.ts');
 
 const origin = 'https://www.isaacjiang.ca';
 test('sitemap lists public canonical pages and published photos, excluding demo and other collection kinds', () => {
@@ -37,4 +44,14 @@ test('publication changes are reflected by rebuilding from the current public ca
 test('slugs are encoded as one path segment rather than query or fragment parameters', () => {
   const result = portfolioSitemap(origin, [{ slug: 'light & shade?#' }], []);
   assert.equal(result.at(-1).url, `${origin}/photo/photos/light%20%26%20shade%3F%23`);
+});
+
+test('archived series have archive canonical URLs without appearing as featured Series entries',()=>{
+ const entries=portfolioSitemap(origin,[],[
+  {slug:'featured',kind:'series',isDemo:false,publicView:'series'},
+  {slug:'older work',kind:'series',isDemo:false,publicView:'archive'},
+ ]).map(e=>e.url);
+ assert.ok(entries.includes(origin+'/photo/series/featured'));
+ assert.ok(entries.includes(origin+'/photo/archive/older%20work'));
+ assert.ok(!entries.includes(origin+'/photo/series/older%20work'));
 });

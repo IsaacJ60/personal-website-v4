@@ -5,7 +5,8 @@ import { notFound, redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/utils/supabase/database.types";
 import type { AdminPortfolioPhoto, PhotoDetails, PortfolioPublication } from "../types";
-import { mapPhoto } from "./catalog";
+import { publicSeriesHref } from "../lib/public-views";
+import { createPublicPortfolioClient, mapPhoto } from "./catalog";
 
 export async function createPortfolioSessionClient() {
   const store = await cookies();
@@ -33,13 +34,33 @@ export const requirePortfolioAdmin = cache(async () => {
   return client;
 });
 
+export const isSeriesPublishingReady = cache(async () => {
+  const client = await requirePortfolioAdmin();
+  const { error } = await client.from("photo_v3_photos").select("owner_series_id").limit(0);
+  if (error?.code === "42703" || error?.code === "PGRST204") return false;
+  if (error) throw new Error("Could not check series publishing setup.");
+  const placement = await client.from("photo_v3_collections").select("public_view").limit(0);
+  if (placement.error?.code === "42703" || placement.error?.code === "PGRST204") return false;
+  if (placement.error) throw new Error("Could not check public view setup.");
+  return true;
+});
+
 export const getAdminPhotoLibrary = cache(async () => {
   const client = await requirePortfolioAdmin();
+  const [series, publicIds] = await Promise.all([getUploadSeries(), getPublicPhotoIds()]);
+  const owners = new Map(series.map((row) => [row.id, row.title]));
+  const visible = new Set(publicIds.map((row) => row.id));
   const photos: AdminPortfolioPhoto[] = [];
   for (let offset = 0; ; offset += 1000) {
-    const result = await client.from("photo_v3_photos").select("*").order("date_taken", { ascending: false }).order("id").range(offset, offset + 999);
+    const result = await client.from("photo_v3_photos").select("*,owner_series_id").order("date_taken", { ascending: false }).order("id").range(offset, offset + 999);
     if (result.error) throw new Error("Could not load the photo library.");
-    photos.push(...result.data.map((row) => ({ ...mapPhoto(row), published: row.published })));
+    photos.push(...result.data.map((row) => {
+      const ownerSeriesTitle = owners.get(row.owner_series_id);
+      if (!row.owner_series_id || ownerSeriesTitle === undefined) {
+        throw new Error("A photo has no valid owning series. Check series publishing setup.");
+      }
+      return { ...mapPhoto(row, false), published: visible.has(row.id), ownerSeriesId: row.owner_series_id, ownerSeriesTitle };
+    }));
     if (result.data.length < 1000) break;
   }
   return photos;
@@ -74,7 +95,9 @@ export async function getPhotoForEditing(id: string) {
     caption: data.description ?? "",
     altText: data.alt_text,
   };
-  return { photo: { ...mapPhoto(data), published: data.published }, details, revision: data.updated_at };
+  const photo = (await getAdminPhotoLibrary()).find((photo) => photo.id === id);
+  if (!photo) notFound();
+  return { photo, details, revision: data.updated_at };
 }
 
 export const getSelectionDraft = cache(async () => {
@@ -101,7 +124,7 @@ export async function getSeriesDrafts(page: number) {
     .select(`
       id, title, legacy_bundle_id, updated_at, photo_v3_collection_photos(count),
       publication:photo_v3_publications!photo_v3_publications_draft_id_fkey(
-        draft_revision,live:photo_v3_collections!photo_v3_publications_live_id_fkey(published)
+        draft_revision,live:photo_v3_collections!photo_v3_publications_live_id_fkey(published,public_view)
       )
     `, { count: "exact" })
     .eq("kind", "series").eq("published", false).eq("is_public_copy", false)
@@ -135,21 +158,22 @@ export const getSeriesDraft = cache(async (id: string) => {
 
 export const portfolioUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function publishedPortfolioHref(kind: string, slug: string) {
-  return kind === "selected" ? "/photo" : `/photo/series/${encodeURIComponent(slug)}`;
+export function publishedPortfolioHref(kind: string, slug: string, publicView = "series") {
+  return kind === "selected" ? "/photo" : publicSeriesHref(slug, publicView);
 }
 
 export async function getDraftPublication(id: string): Promise<PortfolioPublication | null> {
   const client = await requirePortfolioAdmin();
   const { data, error } = await client.from("photo_v3_publications")
-    .select("draft_revision,live:photo_v3_collections!photo_v3_publications_live_id_fkey(kind,slug,published,updated_at)")
+    .select("draft_revision,live:photo_v3_collections!photo_v3_publications_live_id_fkey(kind,slug,published,updated_at,public_view)")
     .eq("draft_id", id).maybeSingle();
   if (error) throw new Error("Could not load the publication status.");
   if (!data?.live?.published) return null;
   return {
     revision: data.draft_revision,
     liveRevision: data.live.updated_at,
-    href: publishedPortfolioHref(data.live.kind, data.live.slug),
+    publicView: data.live.public_view,
+    href: publishedPortfolioHref(data.live.kind, data.live.slug, data.live.public_view),
   };
 }
 
@@ -160,3 +184,27 @@ export async function getSeriesPreview(id: string) {
   const cover = (draft.coverId && byId.get(draft.coverId)) || photos[0];
   return { draft, photos, cover };
 }
+
+// Anonymous reads use the same series eligibility rule as public media.
+async function getPublicPhotoIds() {
+  const client = createPublicPortfolioClient();
+  const ids: { id: string }[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await client.from("photo_v3_photos").select("id").order("id").range(offset, offset + 999);
+    if (error) throw new Error("Could not load series visibility.");
+    ids.push(...data);
+    if (data.length < 1000) return ids;
+  }
+}
+
+export const getUploadSeries = cache(async () => {
+  const client = await requirePortfolioAdmin();
+  const series: { id: string; title: string }[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await client.from("photo_v3_collections").select("id,title")
+      .eq("kind", "series").eq("is_public_copy", false).eq("published", false).order("title").order("id").range(offset, offset + 999);
+    if (error) throw new Error("Could not load upload destinations.");
+    series.push(...data);
+    if (data.length < 1000) return series;
+  }
+});

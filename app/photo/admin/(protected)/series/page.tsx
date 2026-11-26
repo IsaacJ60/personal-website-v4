@@ -44,7 +44,8 @@ export default async function SeriesDraftsPage({ searchParams }: {
           <Link href={`${seriesPath}/${draft.id}`}>
             <span className={styles.seriesTitle}>{draft.title}</span>
             <span className={styles.seriesListMeta}>
-              {live && <span className={styles.publicationBadge}>Published</span>}
+              {!live && <span className={styles.meta}>Draft · Private</span>}
+              {live && <span className={styles.publicationBadge}>{draft.publication?.live?.public_view === "archive" ? "Archived" : "Published"}</span>}
               <span className={styles.meta}>
                 {count} {count === 1 ? "photograph" : "photographs"}{draft.legacy_bundle_id ? " · Imported" : ""}
                 {hasDraftEdits ? " · Draft edits" : ""}
