@@ -3,6 +3,7 @@ import { createPublicPortfolioClient } from "@/features/photo-portfolio/data/cat
 import { photoExportFormat, renderPhotoExport } from "@/features/photo-portfolio/lib/photo-export";
 import { readPhotoOriginal } from "@/features/photo-portfolio/lib/photo-original.server";
 import { findUploadedOriginal } from "@/features/photo-portfolio/lib/original-storage.server";
+import { fullSizePhotoUrl } from "@/features/photo-portfolio/lib/full-size-photo.server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -18,10 +19,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       .select("slug,title,object_key").eq("id", id).eq("published", true).maybeSingle();
     if (error) throw error;
     if (!photo) return reply("Photo unavailable.", 404);
-    if (photo.object_key.startsWith("uploads/") && !await findUploadedOriginal(id)) {
-      return reply("High-resolution sharing isn’t available for this photo yet.", 409);
-    }
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(50000)]);
+    if (format === "full-size") {
+      // Vercel returns only the redirect. R2 serves the stored image bytes directly.
+      const url = await fullSizePhotoUrl(photo.object_key, signal);
+      return new Response(null, { status: 302, headers: {
+        ...headers, Location: url, "Cache-Control": "public, max-age=300, s-maxage=300",
+      } });
+    }
+    if (photo.object_key.startsWith("uploads/") && !await findUploadedOriginal(id)) {
+      return reply("The full-resolution original isn’t available for this photo yet.", 409);
+    }
     const original = await readPhotoOriginal(photo.object_key, signal);
     const { stream, width, height, photoWidth, photoHeight } = await renderPhotoExport(original, format, photo.title);
     const abort = () => stream.destroy();
@@ -41,7 +49,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       "X-Photo-Width": String(photoWidth), "X-Photo-Height": String(photoHeight),
       "X-Export-Width": String(width), "X-Export-Height": String(height),
     } });
-  } catch {
+  } catch (error) {
+    if (format === "full-size" && (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404) {
+      return reply("The full-resolution original isn’t available for this photo yet.", 409);
+    }
     console.error("Photo sharing preparation failed", { id, format });
     return reply("Couldn’t prepare this image. Please try again.", 503);
   }

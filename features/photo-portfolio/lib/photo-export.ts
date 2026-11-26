@@ -1,14 +1,14 @@
 import sharp from "sharp";
 import { join } from "node:path";
 
-export type PhotoExportFormat = "jpeg" | "png" | "png-hd" | "preview";
+export type PhotoExportFormat = "jpeg" | "png" | "png-hd" | "preview" | "full-size";
 export const originalMaxBytes = 30 * 1024 * 1024;
 
 export function photoExportFormat(value: string | null): PhotoExportFormat | null {
-  return value === null || value === "jpeg" ? "jpeg" : value === "png" || value === "png-hd" || value === "preview" ? value : null;
+  return value === null || value === "jpeg" ? "jpeg" : value === "png" || value === "png-hd" || value === "preview" || value === "full-size" ? value : null;
 }
 
-// One composition for all formats. HD copies and dialog previews are resized.
+// Sharing formats use a frame; the full-size viewer preserves the photograph alone.
 export async function renderPhotoExport(original: Buffer, format: PhotoExportFormat, title = "Untitled photograph") {
   if (!original.length || original.length > originalMaxBytes) throw new Error("Invalid original size");
   const image = sharp(original, { limitInputPixels: 60_000_000 });
@@ -18,6 +18,11 @@ export async function renderPhotoExport(original: Buffer, format: PhotoExportFor
   const swapped = [5, 6, 7, 8].includes(metadata.orientation ?? 1);
   const photoWidth = swapped ? metadata.height : metadata.width;
   const photoHeight = swapped ? metadata.width : metadata.height;
+  if (format === "full-size") {
+    // Preserve native resolution, apply orientation, and omit EXIF/GPS metadata.
+    const stream = image.rotate().flatten({ background: "#ffffff" }).jpeg({ quality: 95, chromaSubsampling: "4:4:4" });
+    return { stream, width: photoWidth, height: photoHeight, photoWidth, photoHeight };
+  }
   const edge = Math.max(photoWidth, photoHeight);
   const border = Math.max(1, Math.round(edge * 0.035));
   const footer = Math.max(1, Math.round(edge * 0.09));

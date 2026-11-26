@@ -1,6 +1,6 @@
 # Fresh photo v3 catalog
 
-Status: production release in progress. V3 application checks pass, Isaac has confirmed manual testing, and V3 credentials are configured for Preview and Production. Launching with an empty catalog is explicitly authorized.
+Status: v3 is live in Production. Commit 6cc5153dbcb9d279dd5b397bc0b379be09f2f556 deployed successfully; empty-catalog launch is complete. Upload the curated collection through the live admin.
 
 ## Goal and decisions
 
@@ -169,11 +169,13 @@ is ready. Isaac can choose to launch earlier with an empty or partial collection
   so any rollback target is known.
 - [x] Confirm production credentials can access the new private originals bucket
   and that production configuration targets v3 storage.
-- [ ] Build and deploy the v3-connected app. Coordinate code and environment
+- [x] Build and deploy the v3-connected app. Coordinate code and environment
   changes so production never runs with a mixture of v2 and v3 storage settings.
-- [ ] Check the live admin, upload, image delivery, Selected Work, Archive, Series,
-  sharing, metadata, and sitemap. Verify new uploads land only in v3.
-- [ ] Record the released deployment, table/bucket names, and verification results
+- [x] Check the live empty Selected Work, Archive, Series, sitemap, sharing card,
+  admin sign-in redirect, and denied anonymous upload endpoints.
+- [ ] Confirm the first authenticated production upload and its image delivery.
+  This remains a follow-up; local manual testing was confirmed by Isaac.
+- [x] Record the released deployment, table/bucket names, and verification results
   in the relevant project docs. Leave all previous tables and buckets in place.
 
 Done when: production reads and writes v3 successfully. If a release issue requires
@@ -193,3 +195,24 @@ leave uploaded v3 data in place. No data restore or destructive reset is needed.
   data was copied or removed for the release.
 - Isaac confirmed manual functionality and explicitly approved launching the
   empty catalog; uploading the curated collection can happen after release.
+
+## Completed production release
+
+- Source commit: `6cc5153dbcb9d279dd5b397bc0b379be09f2f556`, pushed to `main`.
+- Deployment: `dpl_4ZEL6Zhd67xse6YZDnU4nzigyh6u` (READY, Production).
+- Live URL: https://www.isaacjiang.ca/photo
+- Isolated production build passed. The first sandboxed attempt stalled; the
+  retry outside the sandbox passed without disturbing the development server.
+  Vercel independently built the same release commit successfully.
+- Live checks passed: empty Selected Work, Archive, and Series; sitemap contains
+  no old photo entries; selected sharing card returns JPEG; unsigned original
+  and derivative upload endpoints return 401. The browser confirms admin access
+  redirects to login. No authenticated production upload was performed.
+- Legacy counts remain 286 v1 photos/35 bundles and 288 v2 photos/39 collections.
+  V3 remains 0 photos, 1 private Selected Work draft, and 0 cleanup tasks. No old
+  catalog data or media was deleted. R2 originals remain retained on photo deletion.
+- Production credentials and code target `photo-v3-originals` and
+  `portfolio-v3-media`. New uploads can now be made through the live admin.
+- The old photo URL renders the not-found state, and the bare domain redirects
+  to www. Next.js streamed redirects/not-found responses can initially return
+  HTTP 200; browser navigation and rendered page state were checked accordingly.

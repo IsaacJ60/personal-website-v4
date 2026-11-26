@@ -64,7 +64,30 @@ test('reject malformed/oversized originals and unsupported output formats', asyn
   assert.equal(photoExportFormat('png'), 'png');
   assert.equal(photoExportFormat('png-hd'), 'png-hd');
   assert.equal(photoExportFormat('preview'), 'preview');
+  assert.equal(photoExportFormat('full-size'), 'full-size');
   for (const input of ['original', 'webp', '', 'https://example.com/image']) assert.equal(photoExportFormat(input), null);
+});
+
+test('full-size viewing preserves native resolution without framing and strips metadata after orientation', async () => {
+  for (const [width, height, orientation] of [[3200, 2000, 1], [2000, 3200, 6], [600, 400, 1]]) {
+    const original = await sharp({ create: { width, height, channels: 3, background: '#3186c2' } })
+      .jpeg().withMetadata({ orientation }).toBuffer();
+    const result = await renderPhotoExport(original, 'full-size');
+    const output = await result.stream.toBuffer();
+    const metadata = await sharp(output).metadata();
+    assert.equal(metadata.width, orientation === 6 ? height : width);
+    assert.equal(metadata.height, orientation === 6 ? width : height);
+    assert.equal(result.width, metadata.width);
+    assert.equal(result.height, metadata.height);
+    assert.equal(metadata.orientation, undefined);
+    assert.equal(metadata.exif, undefined);
+    assert.equal(metadata.xmp, undefined);
+    const { data, info } = await sharp(output).raw().toBuffer({ resolveWithObject: true });
+    for (const offset of [0, data.length - info.channels]) {
+      assert.ok(data.subarray(offset, offset + 3).every((value, channel) => Math.abs(value - [49, 134, 194][channel]) <= 2),
+        'photo corners remain uncropped and unframed');
+    }
+  }
 });
 
 test('a Web response consumes the complete Sharp stream without a premature close', async () => {
