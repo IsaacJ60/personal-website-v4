@@ -1,13 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, type Ref } from "react";
 import { ImageOff } from "lucide-react";
 import type { PortfolioPhoto } from "../types";
 import styles from "../portfolio.module.css";
 
-export default function PortfolioImage({ photo, thumbnail = false, eager = false }: {
+export default function PortfolioImage({ photo, thumbnail = false, eager = false, imageRef, onReady, fetchPriority }: {
   photo: PortfolioPhoto; thumbnail?: boolean; eager?: boolean;
+  imageRef?: Ref<HTMLImageElement>; onReady?: (image: HTMLImageElement) => void;
+  fetchPriority?: "high" | "low" | "auto";
 }) {
   const [failed, setFailed] = useState(false);
   const [sourceRequested, setSourceRequested] = useState(false);
@@ -22,10 +24,15 @@ export default function PortfolioImage({ photo, thumbnail = false, eager = false
         onClick={() => { setSourceRequested(true); setFailed(false); }}>Load source image</button>}
     </span>
   );
-  return <Image src={source} alt={photo.alt} fill
+  return <Image src={source} alt={photo.alt} fill ref={imageRef} fetchPriority={fetchPriority}
     unoptimized={fullSize || photo.prepared || sourceRequested}
     loading={eager ? "eager" : "lazy"}
     sizes={thumbnail ? "(min-width: 1200px) 320px, (min-width: 760px) 40vw, 90vw" : "(min-width: 1200px) 1100px, (min-width: 760px) 75vw, 100vw"}
     className={styles.photoImage}
+    onLoad={async (event) => {
+      const image = event.currentTarget;
+      if (!onReady) return;
+      try { await image.decode(); onReady(image); } catch { /* Leave autoplay waiting if decoding fails. */ }
+    }}
     onError={() => { setFailed(true); setSourceRequested(false); }} />;
 }

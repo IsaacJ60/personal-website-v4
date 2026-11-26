@@ -152,6 +152,8 @@
 .control:hover, .control[aria-pressed="true"] { color: var(--ink); }
 .stage { display: flex; gap: 18px; position: relative; height: calc(100dvh - 266px); min-height: 350px; max-height: 1100px; outline: none; }
 .stageMain { position: relative; flex: 1; min-width: 0; height: 100%; background: var(--paper); touch-action: pan-y pinch-zoom; }
+.bufferedPhoto { position: absolute; inset: 0; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 350ms ease, visibility 0s linear 350ms; }
+.bufferedPhotoActive { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
 .photoImage { object-fit: contain; }
 .stage:fullscreen { height: 100dvh; max-height: none; background: #111; padding: 28px; }
 .stage:fullscreen .stageMain { background: #111; }
@@ -312,5 +314,7 @@
   .slideshow .iconButton { width: 32px; height: 32px; }
   .slideshow .backLink { margin-top: 6px; padding: 4px 0; }
 }
-@media (prefers-reduced-motion: reduce) { .portfolio *, .portfolio *::before { transition: none !important; scroll-behavior: auto !important; } }
+@media (prefers-reduced-motion: reduce) {
+  .portfolio *:not(.bufferedPhoto), .portfolio *::before { transition: none !important; scroll-behavior: auto !important; }
+}
 @media (prefers-reduced-motion: reduce) { .loadingIndicator { animation: none; } }
