@@ -65,6 +65,7 @@ test('reject malformed/oversized originals and unsupported output formats', asyn
   assert.equal(photoExportFormat('png-hd'), 'png-hd');
   assert.equal(photoExportFormat('preview'), 'preview');
   assert.equal(photoExportFormat('full-size'), 'full-size');
+  assert.equal(photoExportFormat('display'), 'display');
   for (const input of ['original', 'webp', '', 'https://example.com/image']) assert.equal(photoExportFormat(input), null);
 });
 
@@ -86,6 +87,30 @@ test('full-size viewing preserves native resolution without framing and strips m
     for (const offset of [0, data.length - info.channels]) {
       assert.ok(data.subarray(offset, offset + 3).every((value, channel) => Math.abs(value - [49, 134, 194][channel]) <= 2),
         'photo corners remain uncropped and unframed');
+    }
+  }
+});
+
+test('display copies fit 2560px without cropping, framing, upscaling, or embedded metadata', async () => {
+  for (const [width, height, orientation, expectedWidth, expectedHeight] of [
+    [4000, 3000, 1, 2560, 1920], [4000, 3000, 6, 1920, 2560],
+    [3000, 4000, 1, 1920, 2560], [3200, 3200, 1, 2560, 2560], [600, 400, 1, 600, 400],
+  ]) {
+    const original = await sharp({ create: { width, height, channels: 3, background: '#3186c2' } })
+      .jpeg().withMetadata({ orientation }).toBuffer();
+    const result = await renderPhotoExport(original, 'display');
+    const output = await result.stream.toBuffer();
+    const metadata = await sharp(output).metadata();
+    assert.equal(metadata.format, 'jpeg');
+    assert.equal(metadata.width, expectedWidth); assert.equal(metadata.height, expectedHeight);
+    assert.equal(result.width, expectedWidth); assert.equal(result.height, expectedHeight);
+    assert.equal(result.photoWidth, orientation === 6 ? height : width);
+    assert.equal(result.photoHeight, orientation === 6 ? width : height);
+    assert.equal(metadata.orientation, undefined);
+    assert.equal(metadata.exif, undefined); assert.equal(metadata.xmp, undefined);
+    const { data, info } = await sharp(output).raw().toBuffer({ resolveWithObject: true });
+    for (const offset of [0, data.length - info.channels]) {
+      assert.ok(data.subarray(offset, offset + 3).every((value, channel) => Math.abs(value - [49, 134, 194][channel]) <= 2));
     }
   }
 });

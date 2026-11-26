@@ -22,7 +22,7 @@ process.env.R2_V3_ORIGINALS_BUCKET_NAME = 'photo-v3-originals';
 const { originalStorageClient } = await import('../features/photo-portfolio/lib/original-storage.server.ts');
 const { GET } = await import('../app/api/photo-sharing/[id]/route.ts');
 const id = '00000000-0000-4000-8000-000000000001';
-const request = photoId => GET(new Request(`https://example.com/api/photo-sharing/${photoId}?format=full-size`),
+const request = (photoId, format = 'full-size') => GET(new Request(`https://example.com/api/photo-sharing/${photoId}?format=${format}`),
   { params: Promise.resolve({ id: photoId }) });
 
 test('full-size requests reject invalid and unpublished photos before accessing originals', async t => {
@@ -95,6 +95,46 @@ test('existing R2 viewing copies need only a HEAD and never download or reproces
     return { ContentType: 'image/jpeg', ContentLength: 1234 };
   });
   assert.equal((await request(id)).status, 302);
+});
+
+test('display requests generate a separate 2560px stored copy once and reuse it', async t => {
+  const original = await sharp({ create: { width: 4000, height: 3000, channels: 3, background: '#3186c2' } }).jpeg().toBuffer();
+  t.mock.method(globalThis, 'fetch', async () => Response.json({ slug: 'test-photo', title: 'Test photo', object_key: `uploads/${id}/display.webp` }));
+  let saved;
+  const calls = [];
+  t.mock.method(originalStorageClient, 'send', async command => {
+    calls.push(command.constructor.name);
+    if (command instanceof GetObjectCommand) {
+      assert.equal(command.input.Key, `originals/${id}/source`);
+      return { ContentLength: original.length, Body: (async function* () { yield original; })() };
+    }
+    assert.equal(command.input.Key, `previews/${id}/display-2560-v1.jpg`);
+    if (command instanceof HeadObjectCommand) {
+      if (!saved) throw Object.assign(new Error('Not found'), { $metadata: { httpStatusCode: 404 } });
+      return { ContentLength: saved.length };
+    }
+    assert.ok(command instanceof PutObjectCommand);
+    assert.equal(command.input.IfNoneMatch, '*');
+    assert.equal(command.input.ContentType, 'image/jpeg');
+    saved = command.input.Body;
+    return {};
+  });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await request(id, 'display');
+    assert.equal(response.status, 302);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    assert.equal(new URL(response.headers.get('Location')).pathname, `/previews/${id}/display-2560-v1.jpg`);
+  }
+  assert.deepEqual(calls, ['HeadObjectCommand', 'GetObjectCommand', 'PutObjectCommand', 'HeadObjectCommand']);
+  const metadata = await sharp(saved).metadata();
+  assert.equal(metadata.width, 2560); assert.equal(metadata.height, 1920);
+});
+
+test('display requests reject invalid and unpublished photos without accessing storage', async t => {
+  t.mock.method(globalThis, 'fetch', async () => Response.json(null));
+  t.mock.method(originalStorageClient, 'send', async () => assert.fail('must not read private storage'));
+  assert.equal((await request('invalid', 'display')).status, 404);
+  assert.equal((await request(id, 'display')).status, 404);
 });
 
 test('storage permission failures do not trigger regeneration or a cacheable redirect', async t => {

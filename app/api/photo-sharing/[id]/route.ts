@@ -20,9 +20,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     if (error) throw error;
     if (!photo) return reply("Photo unavailable.", 404);
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(50000)]);
-    if (format === "full-size") {
+    if (format === "full-size" || format === "display") {
       // Vercel returns only the redirect. R2 serves the stored image bytes directly.
-      const url = await fullSizePhotoUrl(photo.object_key, signal);
+      const url = await fullSizePhotoUrl(photo.object_key, signal, format);
       return new Response(null, { status: 302, headers: {
         ...headers, Location: url,
       } });
@@ -50,7 +50,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       "X-Export-Width": String(width), "X-Export-Height": String(height),
     } });
   } catch (error) {
-    if (format === "full-size" && (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404) {
+    if ((format === "full-size" || format === "display") && (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode === 404) {
       return reply("The full-resolution original isn’t available for this photo yet.", 409);
     }
     console.error("Photo sharing preparation failed", { id, format });

@@ -232,6 +232,7 @@
 .pagination a { padding: 10px 0; }
 .pagination [aria-disabled="true"] { opacity: .4; }
 .imageFailure { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; color: var(--muted); font-size: 12px; background: var(--surface); }
+.imageLoading { position: absolute; inset: 0; display: grid; place-items: center; background: var(--surface); pointer-events: none; }
 .textButton { background: transparent; color: var(--link); border: 0; border-bottom: 1px solid var(--link-rule); padding: 8px 2px; font-size: 12px !important; }
 .emptyState { padding: 70px 0; max-width: 500px; }
 .emptyState h1,.emptyState h2 { font-size: 28px; margin: 0 0 24px; }

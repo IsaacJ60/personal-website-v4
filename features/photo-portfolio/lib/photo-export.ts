@@ -1,14 +1,14 @@
 import sharp from "sharp";
 import { join } from "node:path";
 
-export type PhotoExportFormat = "jpeg" | "png" | "png-hd" | "preview" | "full-size";
+export type PhotoExportFormat = "jpeg" | "png" | "png-hd" | "preview" | "full-size" | "display";
 export const originalMaxBytes = 30 * 1024 * 1024;
 
 export function photoExportFormat(value: string | null): PhotoExportFormat | null {
-  return value === null || value === "jpeg" ? "jpeg" : value === "png" || value === "png-hd" || value === "preview" || value === "full-size" ? value : null;
+  return value === null || value === "jpeg" ? "jpeg" : value === "png" || value === "png-hd" || value === "preview" || value === "full-size" || value === "display" ? value : null;
 }
 
-// Sharing formats use a frame; the full-size viewer preserves the photograph alone.
+// Sharing formats use a frame; viewing formats preserve the photograph alone.
 export async function renderPhotoExport(original: Buffer, format: PhotoExportFormat, title = "Untitled photograph") {
   if (!original.length || original.length > originalMaxBytes) throw new Error("Invalid original size");
   const image = sharp(original, { limitInputPixels: 60_000_000 });
@@ -18,10 +18,16 @@ export async function renderPhotoExport(original: Buffer, format: PhotoExportFor
   const swapped = [5, 6, 7, 8].includes(metadata.orientation ?? 1);
   const photoWidth = swapped ? metadata.height : metadata.width;
   const photoHeight = swapped ? metadata.width : metadata.height;
-  if (format === "full-size") {
-    // Preserve native resolution, apply orientation, and omit EXIF/GPS metadata.
-    const stream = image.rotate().flatten({ background: "#ffffff" }).jpeg({ quality: 95, chromaSubsampling: "4:4:4" });
-    return { stream, width: photoWidth, height: photoHeight, photoWidth, photoHeight };
+  if (format === "full-size" || format === "display") {
+    // Apply orientation and omit EXIF/GPS. Display copies fit a 2560px square
+    // without cropping or upscaling; full-size exports retain native resolution.
+    const ratio = format === "display" ? Math.min(1, 2560 / Math.max(photoWidth, photoHeight)) : 1;
+    const width = Math.max(1, Math.round(photoWidth * ratio));
+    const height = Math.max(1, Math.round(photoHeight * ratio));
+    const stream = image.rotate().flatten({ background: "#ffffff" });
+    if (format === "display") stream.resize({ width, height, fit: "inside", withoutEnlargement: true });
+    stream.jpeg({ quality: format === "display" ? 90 : 95, chromaSubsampling: "4:4:4" });
+    return { stream, width, height, photoWidth, photoHeight };
   }
   const edge = Math.max(photoWidth, photoHeight);
   const border = Math.max(1, Math.round(edge * 0.035));

@@ -6,12 +6,12 @@ import { readPhotoOriginal } from "./photo-original.server";
 import { renderPhotoExport } from "./photo-export";
 
 // Only called after resolving a published catalog row. Originals remain untouched;
-// this versioned viewing copy keeps their resolution without embedding EXIF/GPS.
-export async function fullSizePhotoUrl(objectKey: string, signal: AbortSignal) {
+// these versioned viewing copies omit EXIF/GPS and are reused once generated.
+export async function fullSizePhotoUrl(objectKey: string, signal: AbortSignal, format: "full-size" | "display" = "full-size") {
   const upload = /^uploads\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/display\.webp$/.exec(objectKey);
   if (!upload) throw new Error("Invalid v3 photo key");
   const Bucket = originalBucket();
-  const Key = `previews/${upload[1]}/full-size-v1.jpg`;
+  const Key = `previews/${upload[1]}/${format === "display" ? "display-2560-v1" : "full-size-v1"}.jpg`;
   let exists = false;
   try {
     await originalStorageClient.send(new HeadObjectCommand({ Bucket, Key }), { abortSignal: signal });
@@ -21,7 +21,7 @@ export async function fullSizePhotoUrl(objectKey: string, signal: AbortSignal) {
   }
   if (!exists) {
     const original = await readPhotoOriginal(objectKey, signal);
-    const { stream } = await renderPhotoExport(original, "full-size");
+    const { stream } = await renderPhotoExport(original, format);
     const abort = () => stream.destroy();
     signal.addEventListener("abort", abort, { once: true });
     try {
