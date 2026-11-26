@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createPortfolioSessionClient, portfolioUuid, publishedPortfolioHref, requirePortfolioAdmin } from "@/features/photo-portfolio/data/admin";
 
 type DraftResult = { ok: true; updatedAt: string } | { ok: false; message: string };
@@ -25,6 +25,7 @@ function publicationError(code?: string): { ok: false; message: string } {
 }
 
 function refreshPublicationViews(id: string, kind: string, slug: string, publicView = "series") {
+  updateTag("photo-series-cards");
   revalidatePath("/photo", "layout");
   revalidatePath("/sitemap.xml");
   const href = publishedPortfolioHref(kind, slug, publicView);
@@ -179,6 +180,7 @@ export async function deleteSeriesDraft(id: string, revision: string): Promise<P
   const { error } = await client.rpc("photo_v3_delete_series", { p_series_id: id, p_expected_updated_at: revision });
   if (error) return { ok: false, message: error.code === "40001" ? "This series changed. Reload before deleting."
     : "Make this series private and move or delete its owned photos before deleting it." };
+  updateTag("photo-series-cards");
   revalidatePath("/photo", "layout");
   revalidatePath("/sitemap.xml");
   return { ok: true };

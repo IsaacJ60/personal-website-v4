@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { portfolioUuid, requirePortfolioAdmin } from "@/features/photo-portfolio/data/admin";
 import { normalizePhotoDetails } from "@/features/photo-portfolio/lib/admin-photos";
 import { photoMediaBucket, uploadedPhotoKey } from "@/features/photo-portfolio/lib/upload-media";
@@ -36,6 +36,7 @@ export async function deletePhoto(id: string, revision: string): Promise<{ ok: t
     .eq("id", id).eq("updated_at", revision).select("id").maybeSingle();
   if (error) return { ok: false, message: "Couldn’t delete this photo. Try again." };
   if (!data) return { ok: false, message: "This photo changed or was already removed. Reload before deleting." };
+  updateTag("photo-series-cards");
   revalidatePath("/photo", "layout");
   revalidatePath("/sitemap.xml");
   // Metadata deletion is complete even if storage is down. The Photos page
@@ -60,6 +61,7 @@ export async function savePhotoDetails(id: string, revision: string, fields: Pho
   if (!data) return { ok: false, message: "This photo changed or was removed. Reload before saving again." };
 
   // The same photo can appear in every public section and in multiple curation drafts.
+  updateTag("photo-series-cards");
   revalidatePath("/photo", "layout");
   revalidatePath("/sitemap.xml");
   return { ok: true, revision: data.updated_at, details: metadata.details };
@@ -76,6 +78,7 @@ export async function movePhoto(id: string, revision: string, seriesId: string) 
   if (error) return { ok: false as const, message: error.code === "40001"
     ? "This photo changed. Reload before moving."
     : "Publish its removal or make its series private before moving. Choose an editable destination series." };
+  updateTag("photo-series-cards");
   revalidatePath("/photo", "layout");
   revalidatePath("/sitemap.xml");
   return { ok: true as const };

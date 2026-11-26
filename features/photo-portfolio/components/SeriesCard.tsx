@@ -9,7 +9,7 @@ export default function SeriesCard({ id, title, cover, href, eager }: {
 }) {
   return <article className={styles.seriesCard}>
     <Link href={href} aria-labelledby={`series-${id}`}>
-      <span className={styles.seriesImage}><PortfolioImage photo={cover} thumbnail eager={eager} showLoading /></span>
+      <span className={styles.seriesImage}><PortfolioImage photo={cover} thumbnail eager={eager} showLoading fadeIn /></span>
       <h2 id={`series-${id}`}>{title}</h2>
     </Link>
   </article>;

@@ -59,7 +59,8 @@ export default function Sidebar({ wordmarkClassName }: { wordmarkClassName: stri
           {links.map(({ href, label }) => {
             const active = href === "/photo" ? pathname === href : pathname.startsWith(href)
               || (href === "/photo/archive" && pathname.startsWith("/photo/photos/") && params.get("from") === "archive");
-            return <Link key={href} href={href} aria-current={active ? "page" : undefined}
+            return <Link key={href} href={href} prefetch={href === "/photo/series" || href === "/photo/archive" ? true : undefined}
+              aria-current={active ? "page" : undefined}
               className={active ? styles.activeLink : undefined} onClick={() => setOpen(false)}>{label}</Link>;
           })}
         </nav>

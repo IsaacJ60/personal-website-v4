@@ -134,6 +134,11 @@
 .loadingState { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 32px; text-align: center; font-size: 13px; line-height: 1.7; letter-spacing: .015em; color: var(--muted); }
 .loadingIndicator { width: 23px; height: 23px; border: 1px solid var(--rule); border-top-color: var(--accent); border-radius: 50%; animation: loadingRotation 1.2s linear infinite; }
 @keyframes loadingRotation { to { transform: rotate(360deg); } }
+.loadingDots { display: flex; align-items: center; gap: 7px; height: 23px; }
+.loadingDots span { width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .25; animation: loadingPulse 1.5s ease-in-out infinite; }
+.loadingDots span:nth-child(2) { animation-delay: .2s; }
+.loadingDots span:nth-child(3) { animation-delay: .4s; }
+@keyframes loadingPulse { 0%, 60%, 100% { opacity: .25; } 30% { opacity: .85; } }
 /* Views with their own viewport layout keep document scrolling off. */
 :global(html):has(.main :is(.slideshow, .loadingState, [data-photo-editor])),
 :global(body):has(.main :is(.slideshow, .loadingState, [data-photo-editor])) { overflow: hidden; }
@@ -198,7 +203,9 @@
 .contactLink:hover span { text-decoration-color: var(--ink); }
 .seriesGrid { display: grid; grid-template-columns: repeat(3,minmax(0,340px)); justify-content: center; gap: 40px 28px; }
 .seriesImage { display: block; position: relative; aspect-ratio: var(--photo-thumbnail-ratio); }
-.seriesImage .photoImage { transition: filter 220ms ease; }
+.seriesPlaceholder { border: 1px solid var(--rule); }
+.seriesPlaceholderTitle { display: block; width: 96px; height: 14px; margin: 15px auto 5px; border-radius: 2px; background: var(--rule); }
+.seriesImage .photoImage { transition: opacity 350ms ease, filter 220ms ease; }
 .seriesCard a:focus-visible .photoImage { filter: brightness(.94); }
 @media (hover: hover) and (pointer: fine) {
   .seriesCard a:hover .photoImage { filter: brightness(.94); }
