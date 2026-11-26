@@ -15,9 +15,10 @@ type Props = Pick<PortfolioCollection, "title" | "description" | "photos" | "isD
   archiveContext?: { query: string; place: string; year: string };
   headerAction?: ReactNode;
   autoAdvance?: boolean;
+  preloadNeighbors?: boolean;
 };
 
-export default function PortfolioViewer({ title, description, photos, isDemo, initialSlug, backHref, backLabel = "Back to archive", subtitle, archiveContext, headerAction, autoAdvance = false }: Props) {
+export default function PortfolioViewer({ title, description, photos, isDemo, initialSlug, backHref, backLabel = "Back to archive", subtitle, archiveContext, headerAction, autoAdvance = false, preloadNeighbors = false }: Props) {
   const pathname = usePathname();
   const params = useSearchParams();
   const selectedSlug = params.get("photo") || initialSlug;
@@ -37,7 +38,8 @@ export default function PortfolioViewer({ title, description, photos, isDemo, in
   const swipe = useRef<{ x: number; y: number; slug: string } | null>(null);
   const bufferedImages = useRef(new Map<string, HTMLImageElement>());
   const readyImages = useRef(new WeakMap<HTMLImageElement, number>());
-  const bufferedIndexes = autoAdvance && photos.length
+  const bufferEnabled = autoAdvance || preloadNeighbors;
+  const bufferedIndexes = bufferEnabled && photos.length
     ? [...new Set([index, (index + 1) % photos.length, (index + 2) % photos.length, (index + photos.length - 1) % photos.length])].sort((a, b) => a - b)
     : [index];
   const markImageReady = useCallback((image: HTMLImageElement) => {
@@ -154,10 +156,10 @@ export default function PortfolioViewer({ title, description, photos, isDemo, in
       ) : (
         <>
           <div className={styles.stage} ref={stage} tabIndex={-1}>
-            <div className={styles.stageMain} key={autoAdvance ? "buffer" : photo.id}
+            <div className={styles.stageMain} key={bufferEnabled ? "buffer" : photo.id}
               onTouchStart={startSwipe} onTouchMove={moveSwipe} onTouchEnd={endSwipe}
               onTouchCancel={() => { swipe.current = null; }}>
-              {autoAdvance ? bufferedIndexes.map((position) => {
+              {bufferEnabled ? bufferedIndexes.map((position) => {
                 const item = photos[position];
                 const active = position === index;
                 return <div key={item.id} className={`${styles.bufferedPhoto} ${active ? styles.bufferedPhotoActive : ""}`}

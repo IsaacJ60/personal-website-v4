@@ -23,6 +23,6 @@ export async function seriesPageMetadata(slug: string, publicView: string) {
 export default async function PublicSeriesPage({ slug, publicView }: { slug: string; publicView: "series" | "archive" }) {
   const series = await getSeries(slug, publicView);
   return <PortfolioViewer key={series.id} title={series.title} description={series.description}
-    photos={series.photos} isDemo={series.isDemo} backHref={`/photo/${publicView}`}
+    photos={series.photos} isDemo={series.isDemo} backHref={`/photo/${publicView}`} preloadNeighbors
     backLabel={publicView === "archive" ? "All archived series" : "All series"} />;
 }

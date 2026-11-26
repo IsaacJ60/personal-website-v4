@@ -29,6 +29,9 @@ export default function PortfolioImage({ photo, thumbnail = false, eager = false
     loading={eager ? "eager" : "lazy"}
     sizes={thumbnail ? "(min-width: 1200px) 320px, (min-width: 760px) 40vw, 90vw" : "(min-width: 1200px) 1100px, (min-width: 760px) 75vw, 100vw"}
     className={styles.photoImage}
+    draggable={false}
+    onContextMenu={(event) => event.preventDefault()}
+    onDragStart={(event) => event.preventDefault()}
     onLoad={async (event) => {
       const image = event.currentTarget;
       if (!onReady) return;

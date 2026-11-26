@@ -314,7 +314,3 @@
   .slideshow .iconButton { width: 32px; height: 32px; }
   .slideshow .backLink { margin-top: 6px; padding: 4px 0; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .portfolio *:not(.bufferedPhoto), .portfolio *::before { transition: none !important; scroll-behavior: auto !important; }
-}
-@media (prefers-reduced-motion: reduce) { .loadingIndicator { animation: none; } }
