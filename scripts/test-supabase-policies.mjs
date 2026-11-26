@@ -23,6 +23,8 @@ const publishMigration = await readMigration('_publish_photo_v2_draft.sql');
 const managePublicationMigration = await readMigration('_manage_photo_v2_publications.sql');
 const uploadMediaMigration = await readMigration('_add_photo_v2_media_storage.sql');
 const mediaCleanupMigration = await readMigration('_add_photo_v2_media_cleanup.sql');
+const v3Migration = await readMigration('_create_photo_v3_catalog.sql');
+const v3MediaMigration = await readMigration('_add_photo_v3_media_storage.sql');
 const admin = '00000000-0000-4000-8000-000000000001';
 const otherUser = '00000000-0000-4000-8000-000000000002';
 const identifier = (value) => '"' + value.replaceAll('"', '""') + '"';
@@ -760,5 +762,97 @@ test('atomic private v2 selection draft saves', async (t) => {
       });
       for(const name of tables) assert.deepEqual(await rows(db,name),beforeV1[name]);
     });
+  } finally { await db.close(); }
+});
+
+test('empty v3 catalog isolates access, publication, and cleanup from existing catalogs', async () => {
+  const db = await createDatabase();
+  try {
+    for (const sql of [migration, catalogMigration, draftMigration, seriesMigration, publishMigration, managePublicationMigration]) await db.exec(sql);
+    const existingTables = [...tables, 'photo_v2_photos', 'photo_v2_collections', 'photo_v2_collection_photos', 'photo_v2_publications'];
+    const snapshot = async () => Promise.all(existingTables.map(async name => (await db.query(`SELECT to_jsonb(t) AS row FROM public.${identifier(name)} t ORDER BY to_jsonb(t)::text`)).rows));
+    const before = await snapshot();
+    await db.exec(v3Migration);
+    assert.deepEqual(await snapshot(), before);
+    const draft = (await db.query("SELECT * FROM public.photo_v3_collections")).rows;
+    assert.equal(draft.length, 1);
+    assert.equal(draft[0].slug, 'selected-work');
+    assert.equal(draft[0].published, false);
+    for (const name of ['photos', 'collection_photos', 'publications', 'media_cleanup']) {
+      assert.equal((await db.query(`SELECT count(*)::int AS n FROM public.photo_v3_${name}`)).rows[0].n, 0);
+    }
+    assert.equal((await db.query("SELECT count(*)::int AS n FROM pg_class WHERE relnamespace='public'::regnamespace AND relname LIKE 'photo_v3_%' AND relkind='r' AND NOT relrowsecurity")).rows[0].n, 0);
+    assert.equal((await db.query("SELECT count(*)::int AS n FROM pg_constraint WHERE conrelid IN (SELECT oid FROM pg_class WHERE relname LIKE 'photo_v3_%') AND contype='f' AND confrelid NOT IN (SELECT oid FROM pg_class WHERE relname LIKE 'photo_v3_%')")).rows[0].n, 0);
+    assert.equal((await db.query("SELECT count(*)::int AS n FROM pg_proc WHERE proname LIKE 'photo_v3_%' AND (prosecdef OR prosrc LIKE '%photo_v2%')")).rows[0].n, 0);
+    for (const [role, user] of [['anon', null], ['authenticated', otherUser]]) {
+      await asRole(db, role, user, async () => {
+        assert.equal((await db.query('SELECT * FROM public.photo_v3_collections')).rows.length, 0);
+        assert.equal((await db.query('SELECT * FROM public.photo_v3_photos')).rows.length, 0);
+      });
+      await assert.rejects(asRole(db, role, user, () => db.query("INSERT INTO public.photo_v3_collections(slug,title,kind) VALUES ('denied','Denied','series')")), /permission denied|row-level security/);
+      await assert.rejects(asRole(db, role, user, () => db.query('SELECT public.photo_v3_save_selection_draft($1,$2,$3::uuid[])', [draft[0].id, draft[0].updated_at, []])), /permission denied|Administrator access required/);
+    }
+    const photoId = '00000000-0000-4000-8000-000000000099';
+    await db.query("INSERT INTO public.photo_v3_photos(id,slug,object_key,title,date_taken,alt_text,published) VALUES ($1,'v3-only',$2,'V3','2026-11-25','V3',true)", [photoId, `uploads/${photoId}/display.webp`]);
+    await asRole(db, 'authenticated', admin, async () => {
+      const saved = (await db.query('SELECT public.photo_v3_save_selection_draft($1,$2,$3::uuid[]) AS revision', [draft[0].id, draft[0].updated_at, [photoId]])).rows[0].revision;
+      const published = (await db.query('SELECT * FROM public.photo_v3_publish_draft($1,$2)', [draft[0].id, saved])).rows;
+      assert.equal(published.length, 1);
+      assert.equal((await db.query('SELECT * FROM public.photo_v3_publications')).rows.length, 1);
+    });
+    await asRole(db, 'anon', null, async () => {
+      assert.equal((await db.query('SELECT * FROM public.photo_v3_photos')).rows.length, 1);
+      assert.equal((await db.query('SELECT * FROM public.photo_v3_collections')).rows.length, 0);
+    });
+    await asRole(db, 'authenticated', admin, async () => {
+      await db.query('DELETE FROM public.photo_v3_photos WHERE id=$1', [photoId]);
+      assert.equal((await db.query('SELECT * FROM public.photo_v3_media_cleanup')).rows[0].photo_id, photoId);
+    });
+    assert.deepEqual(await snapshot(), before);
+  } finally { await db.close(); }
+});
+
+test('v3 storage policies isolate same-ID media from v2 and constrain cleanup', async () => {
+  const db = await createDatabase();
+  try {
+    for (const sql of [migration, catalogMigration, v3Migration]) await db.exec(sql);
+    await db.exec(`CREATE SCHEMA storage;
+      CREATE TABLE storage.buckets(id text PRIMARY KEY,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+      CREATE TABLE storage.objects(bucket_id text REFERENCES storage.buckets(id),name text,PRIMARY KEY(bucket_id,name));
+      ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+      GRANT USAGE ON SCHEMA storage TO anon,authenticated;
+      GRANT SELECT,INSERT,UPDATE,DELETE ON storage.objects TO anon,authenticated;`);
+    for (const sql of [uploadMediaMigration, mediaCleanupMigration, v3MediaMigration]) await db.exec(sql);
+    const id = '00000000-0000-4000-8000-000000000098';
+    const key = `uploads/${id}/display.webp`;
+    const thumb = `uploads/${id}/thumbnail.webp`;
+    for (const version of [2,3]) {
+      await db.query(`INSERT INTO public.photo_v${version}_photos(id,slug,object_key,title,date_taken,alt_text,published) VALUES($1,'same-id',$2,'Photo','2026-11-25','Photo',$3)`, [id,key,version===2]);
+      await db.query('INSERT INTO storage.objects(bucket_id,name) VALUES($1,$2),($1,$3)', [`portfolio-v${version}-media`,key,thumb]);
+    }
+    for (const [role,user] of [['anon',null],['authenticated',otherUser]]) {
+      await asRole(db,role,user,async () => {
+        const visible=(await db.query('SELECT bucket_id FROM storage.objects')).rows;
+        assert.equal(visible.length,2);
+        assert.ok(visible.every(row=>row.bucket_id==='portfolio-v2-media'));
+      });
+      await assert.rejects(asRole(db,role,user,()=>db.query("INSERT INTO storage.objects VALUES('portfolio-v3-media','uploads/denied/display.webp')")),/row-level security/);
+    }
+    await asRole(db,'authenticated',admin,async () => {
+      assert.equal((await db.query('SELECT * FROM storage.objects')).rows.length,4);
+      await assert.rejects(db.query("INSERT INTO storage.objects VALUES('portfolio-v3-media','original.jpg')"),/row-level security/);
+    });
+    await asRole(db,'authenticated',admin,async () => {
+      assert.equal((await db.query("UPDATE storage.objects SET name=name WHERE bucket_id='portfolio-v3-media' RETURNING name")).rows.length,0);
+      await db.query('INSERT INTO public.photo_v3_media_cleanup(photo_id) VALUES($1)',[id]);
+      assert.equal((await db.query("DELETE FROM storage.objects WHERE bucket_id='portfolio-v3-media' RETURNING name")).rows.length,0);
+      await db.query('DELETE FROM public.photo_v3_photos WHERE id=$1',[id]);
+      const removed=(await db.query('DELETE FROM storage.objects RETURNING bucket_id')).rows;
+      assert.equal(removed.length,2);
+      assert.ok(removed.every(row=>row.bucket_id==='portfolio-v3-media'));
+      assert.equal((await db.query('SELECT * FROM public.photo_v2_photos WHERE id=$1',[id])).rows.length,1);
+    });
+    await db.query('UPDATE public.photo_v3_photos SET published=true WHERE id=$1',[id]);
+    await asRole(db,'anon',null,async () => assert.equal((await db.query("SELECT * FROM storage.objects WHERE bucket_id='portfolio-v3-media'")).rows.length,2));
   } finally { await db.close(); }
 });

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const id = body.id.toLowerCase();
   const metadata = normalizePhotoDetails(body.details);
   if (!metadata.ok) return reply({ error: metadata.message }, 400);
-  const { data: photo, error } = await client.from("photo_v2_photos").select("*").eq("id", id).maybeSingle();
+  const { data: photo, error } = await client.from("photo_v3_photos").select("*").eq("id", id).maybeSingle();
   if (error) return reply({ error: "Couldn’t check the saved photo. Retry publishing." }, 503);
   if (!photo || photo.object_key !== uploadedPhotoKey(id)) return reply({ error: "This upload was removed or is unavailable. Check Photos." }, 404);
   const complete = () => {
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   const storage = client.storage.from(photoMediaBucket);
   const files = await Promise.all([storage.exists(uploadedPhotoKey(id)), storage.exists(uploadedPhotoKey(id, "thumbnail"))]);
   if (files.some((file) => file.error || !file.data)) return reply({ error: "Both image sizes must be available before publishing. Retry or check the photo editor." }, 409);
-  const updated = await client.from("photo_v2_photos").update({ published: true })
+  const updated = await client.from("photo_v3_photos").update({ published: true })
     .eq("id", id).eq("object_key", uploadedPhotoKey(id)).eq("updated_at", photo.updated_at).select("id").maybeSingle();
   if (updated.error) return reply({ error: "Couldn’t publish this photo. Retry publishing." }, 503);
   if (!updated.data) return reply({ error: "This photo changed or was removed. Review it in Photos before publishing." }, 409);

@@ -14,12 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      photo_v2_media_cleanup: {
-        Row: { photo_id: string; created_at: string }
-        Insert: { photo_id: string; created_at?: string }
-        Update: { photo_id?: string; created_at?: string }
-        Relationships: []
-      }
       bundle_photos: {
         Row: {
           bundle_id: string
@@ -193,38 +187,20 @@ export type Database = {
           },
         ]
       }
-      photo_v2_publications: {
+      photo_v2_media_cleanup: {
         Row: {
-          draft_id: string
-          draft_revision: string
-          live_id: string
+          created_at: string
+          photo_id: string
         }
         Insert: {
-          draft_id: string
-          draft_revision: string
-          live_id: string
+          created_at?: string
+          photo_id: string
         }
         Update: {
-          draft_id?: string
-          draft_revision?: string
-          live_id?: string
+          created_at?: string
+          photo_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "photo_v2_publications_draft_id_fkey"
-            columns: ["draft_id"]
-            isOneToOne: true
-            referencedRelation: "photo_v2_collections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "photo_v2_publications_live_id_fkey"
-            columns: ["live_id"]
-            isOneToOne: true
-            referencedRelation: "photo_v2_collections"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       photo_v2_photos: {
         Row: {
@@ -285,6 +261,248 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      photo_v2_publications: {
+        Row: {
+          draft_id: string
+          draft_revision: string
+          live_id: string
+        }
+        Insert: {
+          draft_id: string
+          draft_revision: string
+          live_id: string
+        }
+        Update: {
+          draft_id?: string
+          draft_revision?: string
+          live_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_v2_publications_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: true
+            referencedRelation: "photo_v2_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photo_v2_publications_live_id_fkey"
+            columns: ["live_id"]
+            isOneToOne: true
+            referencedRelation: "photo_v2_collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photo_v3_collection_photos: {
+        Row: {
+          collection_id: string
+          created_at: string
+          photo_id: string
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          collection_id: string
+          created_at?: string
+          photo_id: string
+          position: number
+          updated_at?: string
+        }
+        Update: {
+          collection_id?: string
+          created_at?: string
+          photo_id?: string
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_v3_collection_photos_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "photo_v3_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photo_v3_collection_photos_photo_id_fkey"
+            columns: ["photo_id"]
+            isOneToOne: false
+            referencedRelation: "photo_v3_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photo_v3_collections: {
+        Row: {
+          categories: string[]
+          cover_photo_id: string | null
+          created_at: string
+          date_taken: string | null
+          description: string | null
+          id: string
+          is_public_copy: boolean
+          kind: string
+          legacy_bundle_id: string | null
+          location_name: string | null
+          published: boolean
+          slug: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          categories?: string[]
+          cover_photo_id?: string | null
+          created_at?: string
+          date_taken?: string | null
+          description?: string | null
+          id?: string
+          is_public_copy?: boolean
+          kind: string
+          legacy_bundle_id?: string | null
+          location_name?: string | null
+          published?: boolean
+          slug: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          categories?: string[]
+          cover_photo_id?: string | null
+          created_at?: string
+          date_taken?: string | null
+          description?: string | null
+          id?: string
+          is_public_copy?: boolean
+          kind?: string
+          legacy_bundle_id?: string | null
+          location_name?: string | null
+          published?: boolean
+          slug?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_v3_collections_cover_photo_id_fkey"
+            columns: ["cover_photo_id"]
+            isOneToOne: false
+            referencedRelation: "photo_v3_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photo_v3_media_cleanup: {
+        Row: {
+          created_at: string
+          photo_id: string
+        }
+        Insert: {
+          created_at?: string
+          photo_id: string
+        }
+        Update: {
+          created_at?: string
+          photo_id?: string
+        }
+        Relationships: []
+      }
+      photo_v3_photos: {
+        Row: {
+          alt_text: string
+          categories: string[]
+          created_at: string
+          date_taken: string
+          description: string | null
+          focus_x: number | null
+          focus_y: number | null
+          id: string
+          image_height: number | null
+          image_width: number | null
+          location: string | null
+          object_key: string
+          published: boolean
+          slug: string
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          alt_text: string
+          categories?: string[]
+          created_at?: string
+          date_taken: string
+          description?: string | null
+          focus_x?: number | null
+          focus_y?: number | null
+          id?: string
+          image_height?: number | null
+          image_width?: number | null
+          location?: string | null
+          object_key: string
+          published?: boolean
+          slug: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          alt_text?: string
+          categories?: string[]
+          created_at?: string
+          date_taken?: string
+          description?: string | null
+          focus_x?: number | null
+          focus_y?: number | null
+          id?: string
+          image_height?: number | null
+          image_width?: number | null
+          location?: string | null
+          object_key?: string
+          published?: boolean
+          slug?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      photo_v3_publications: {
+        Row: {
+          draft_id: string
+          draft_revision: string
+          live_id: string
+        }
+        Insert: {
+          draft_id: string
+          draft_revision: string
+          live_id: string
+        }
+        Update: {
+          draft_id?: string
+          draft_revision?: string
+          live_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_v3_publications_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: true
+            referencedRelation: "photo_v3_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photo_v3_publications_live_id_fkey"
+            columns: ["live_id"]
+            isOneToOne: true
+            referencedRelation: "photo_v3_collections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       photos: {
         Row: {
@@ -392,6 +610,55 @@ export type Database = {
         Returns: string
       }
       photo_v2_unpublish_draft: {
+        Args: { p_draft_id: string; p_expected_live_updated_at: string }
+        Returns: {
+          collection_kind: string
+          public_slug: string
+        }[]
+      }
+      photo_v3_publish_draft: {
+        Args: { p_draft_id: string; p_expected_updated_at: string }
+        Returns: {
+          collection_kind: string
+          public_slug: string
+        }[]
+      }
+      photo_v3_save_and_publish_draft: {
+        Args: {
+          p_cover_photo_id?: string
+          p_description?: string
+          p_draft_id: string
+          p_expected_updated_at?: string
+          p_kind: string
+          p_photo_ids: string[]
+          p_title?: string
+        }
+        Returns: {
+          collection_kind: string
+          public_slug: string
+          saved_revision: string
+        }[]
+      }
+      photo_v3_save_selection_draft: {
+        Args: {
+          p_collection_id: string
+          p_expected_updated_at: string
+          p_photo_ids: string[]
+        }
+        Returns: string
+      }
+      photo_v3_save_series_draft: {
+        Args: {
+          p_collection_id: string
+          p_cover_photo_id?: string
+          p_description: string
+          p_expected_updated_at?: string
+          p_photo_ids: string[]
+          p_title: string
+        }
+        Returns: string
+      }
+      photo_v3_unpublish_draft: {
         Args: { p_draft_id: string; p_expected_live_updated_at: string }
         Returns: {
           collection_kind: string

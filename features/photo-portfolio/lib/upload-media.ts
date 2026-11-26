@@ -1,4 +1,4 @@
-export const photoMediaBucket = "portfolio-v2-media";
+export const photoMediaBucket = "portfolio-v3-media";
 export const uploadMaxBytes = 3_500_000;
 export const sourceMaxBytes = 30_000_000;
 export const uploadDisplayBounds = { width: 1600, height: 1400 };

@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const findPhoto = () => client.from("photo_v2_photos").select("id,slug,published,object_key").eq("id", id).maybeSingle();
+  const findPhoto = () => client.from("photo_v3_photos").select("id,slug,published,object_key").eq("id", id).maybeSingle();
   const existing = await findPhoto();
   if (existing.error) return fail("Couldn’t check this upload. Try again.", 503);
   if (existing.data) return existing.data.object_key === displayKey
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
   const name = metadata.details.title.normalize("NFKD").toLowerCase()
     .replace(/\p{M}/gu, "").replace(/[^a-z0-9]+/g, "-").slice(0, 72).replace(/^-|-$/g, "") || "photo";
   const slug = `${name}-${id.slice(0, 12)}`;
-  const { error } = await client.from("photo_v2_photos").insert({
+  const { error } = await client.from("photo_v3_photos").insert({
     id, slug, object_key: displayKey, ...metadata.columns,
     image_width: images.width, image_height: images.height, published: publish,
   });

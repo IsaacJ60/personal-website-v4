@@ -37,7 +37,7 @@ export const getAdminPhotoLibrary = cache(async () => {
   const client = await requirePortfolioAdmin();
   const photos: AdminPortfolioPhoto[] = [];
   for (let offset = 0; ; offset += 1000) {
-    const result = await client.from("photo_v2_photos").select("*").order("date_taken", { ascending: false }).order("id").range(offset, offset + 999);
+    const result = await client.from("photo_v3_photos").select("*").order("date_taken", { ascending: false }).order("id").range(offset, offset + 999);
     if (result.error) throw new Error("Could not load the photo library.");
     photos.push(...result.data.map((row) => ({ ...mapPhoto(row), published: row.published })));
     if (result.data.length < 1000) break;
@@ -49,7 +49,7 @@ export async function getPhotoLocations() {
   const client = await requirePortfolioAdmin();
   const locations = new Map<string, string>();
   for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await client.from("photo_v2_photos").select("location")
+    const { data, error } = await client.from("photo_v3_photos").select("location")
       .not("location", "is", null).order("id").range(offset, offset + 999);
     if (error) throw new Error("Could not load photo locations.");
     for (const row of data) {
@@ -64,7 +64,7 @@ export async function getPhotoLocations() {
 export async function getPhotoForEditing(id: string) {
   const client = await requirePortfolioAdmin();
   if (!portfolioUuid.test(id)) notFound();
-  const { data, error } = await client.from("photo_v2_photos").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await client.from("photo_v3_photos").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error("Could not load the photograph.");
   if (!data) notFound();
   const details: PhotoDetails = {
@@ -81,13 +81,13 @@ export const getSelectionDraft = cache(async () => {
   const client = await requirePortfolioAdmin();
   const [photos, { data: collection, error }] = await Promise.all([
     getAdminPhotoLibrary(),
-    client.from("photo_v2_collections").select("id,title,updated_at,published,kind,photo_v2_collection_photos(photo_id,position)")
+    client.from("photo_v3_collections").select("id,title,updated_at,published,kind,photo_v3_collection_photos(photo_id,position)")
       .eq("slug", "selected-work").single(),
   ]);
   if (error || !collection || collection.published || collection.kind !== "selected") {
     throw new Error("The private Selected Work draft is unavailable.");
   }
-  const selectedIds = collection.photo_v2_collection_photos
+  const selectedIds = collection.photo_v3_collection_photos
     .sort((a, b) => a.position - b.position).map((member) => member.photo_id);
   return { collection, photos, selectedIds };
 });
@@ -97,11 +97,11 @@ export const seriesDraftPageSize = 10;
 export async function getSeriesDrafts(page: number) {
   const client = await requirePortfolioAdmin();
   const start = (page - 1) * seriesDraftPageSize;
-  const { data, count, error } = await client.from("photo_v2_collections")
+  const { data, count, error } = await client.from("photo_v3_collections")
     .select(`
-      id, title, legacy_bundle_id, updated_at, photo_v2_collection_photos(count),
-      publication:photo_v2_publications!photo_v2_publications_draft_id_fkey(
-        draft_revision,live:photo_v2_collections!photo_v2_publications_live_id_fkey(published)
+      id, title, legacy_bundle_id, updated_at, photo_v3_collection_photos(count),
+      publication:photo_v3_publications!photo_v3_publications_draft_id_fkey(
+        draft_revision,live:photo_v3_collections!photo_v3_publications_live_id_fkey(published)
       )
     `, { count: "exact" })
     .eq("kind", "series").eq("published", false).eq("is_public_copy", false)
@@ -115,13 +115,13 @@ export async function getSeriesDrafts(page: number) {
 export const getSeriesDraft = cache(async (id: string) => {
   const client = await requirePortfolioAdmin();
   if (!portfolioUuid.test(id)) notFound();
-  const { data, error } = await client.from("photo_v2_collections")
-    .select("id,title,description,cover_photo_id,updated_at,photo_v2_collection_photos(photo_id,position)")
+  const { data, error } = await client.from("photo_v3_collections")
+    .select("id,title,description,cover_photo_id,updated_at,photo_v3_collection_photos(photo_id,position)")
     .eq("id", id).eq("kind", "series").eq("published", false).eq("is_public_copy", false).maybeSingle();
   if (error) throw new Error("Could not load the Series draft.");
   if (!data) notFound();
 
-  const selectedIds = data.photo_v2_collection_photos
+  const selectedIds = data.photo_v3_collection_photos
     .sort((a, b) => a.position - b.position).map((row) => row.photo_id);
   return {
     id: data.id,
@@ -141,8 +141,8 @@ export function publishedPortfolioHref(kind: string, slug: string) {
 
 export async function getDraftPublication(id: string): Promise<PortfolioPublication | null> {
   const client = await requirePortfolioAdmin();
-  const { data, error } = await client.from("photo_v2_publications")
-    .select("draft_revision,live:photo_v2_collections!photo_v2_publications_live_id_fkey(kind,slug,published,updated_at)")
+  const { data, error } = await client.from("photo_v3_publications")
+    .select("draft_revision,live:photo_v3_collections!photo_v3_publications_live_id_fkey(kind,slug,published,updated_at)")
     .eq("draft_id", id).maybeSingle();
   if (error) throw new Error("Could not load the publication status.");
   if (!data?.live?.published) return null;

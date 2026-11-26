@@ -10,7 +10,7 @@ import { removeUploadFiles } from "@/features/photo-portfolio/lib/remove-upload-
 export async function retryPhotoMediaCleanup(photoId?: string) {
   const client = await requirePortfolioAdmin();
   if (photoId !== undefined && !portfolioUuid.test(photoId)) return;
-  let query = client.from("photo_v2_media_cleanup").select("photo_id").order("created_at").limit(25);
+  let query = client.from("photo_v3_media_cleanup").select("photo_id").order("created_at").limit(25);
   if (photoId) query = query.eq("photo_id", photoId);
   const { data, error } = await query;
   if (error) throw new Error("Could not load pending image cleanup.");
@@ -18,7 +18,7 @@ export async function retryPhotoMediaCleanup(photoId?: string) {
   for (const task of data) {
     const paths = [uploadedPhotoKey(task.photo_id), uploadedPhotoKey(task.photo_id, "thumbnail")];
     if (await removeUploadFiles(storage, paths)) {
-      const result = await client.from("photo_v2_media_cleanup").delete().eq("photo_id", task.photo_id);
+      const result = await client.from("photo_v3_media_cleanup").delete().eq("photo_id", task.photo_id);
       if (result.error) throw new Error("Could not confirm image cleanup. Retry from Photos.");
     }
   }
@@ -32,7 +32,7 @@ export async function deletePhoto(id: string, revision: string): Promise<{ ok: t
   }
   // Existing foreign keys remove memberships and clear covers in the same transaction.
   // The trigger durably queues only new-upload media for cleanup, never legacy files.
-  const { data, error } = await client.from("photo_v2_photos").delete()
+  const { data, error } = await client.from("photo_v3_photos").delete()
     .eq("id", id).eq("updated_at", revision).select("id").maybeSingle();
   if (error) return { ok: false, message: "Couldn’t delete this photo. Try again." };
   if (!data) return { ok: false, message: "This photo changed or was already removed. Reload before deleting." };
@@ -59,7 +59,7 @@ export async function savePhotoDetails(id: string, revision: string, fields: Pho
     const files = await Promise.all([storage.exists(displayKey), storage.exists(uploadedPhotoKey(id, "thumbnail"))]);
     if (files.some((file) => file.error || !file.data)) return { ok: false, message: "Both image sizes must be available before publishing." };
   }
-  let query = client.from("photo_v2_photos").update(makePublic ? { ...metadata.columns, published: true } : metadata.columns)
+  let query = client.from("photo_v3_photos").update(makePublic ? { ...metadata.columns, published: true } : metadata.columns)
     .eq("id", id).eq("updated_at", revision);
   if (makePublic) query = query.eq("object_key", displayKey).eq("published", false);
   const { data, error } = await query.select("updated_at,published").maybeSingle();

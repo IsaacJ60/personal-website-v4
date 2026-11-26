@@ -37,7 +37,7 @@ export default async function SeriesDraftsPage({ searchParams }: {
     </div>
     {drafts.length ? <ul className={styles.draftList}>
       {drafts.map((draft) => {
-        const count = draft.photo_v2_collection_photos[0]?.count ?? 0;
+        const count = draft.photo_v3_collection_photos[0]?.count ?? 0;
         const live = draft.publication?.live?.published;
         const hasDraftEdits = live && draft.publication?.draft_revision !== draft.updated_at;
         return <li key={draft.id}>

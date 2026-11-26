@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { createPublicPortfolioClient, getPortfolio } from "@/features/photo-portfolio/data/catalog";
 import { photoMediaBucket, uploadedPhotoKey } from "@/features/photo-portfolio/lib/upload-media";
 import { renderShareCard } from "@/features/photo-portfolio/lib/share-card";
@@ -9,36 +7,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function photoBytes(photo: PortfolioPhoto) {
-  if (photo.uploaded) {
-    const { data, error } = await createPublicPortfolioClient().storage.from(photoMediaBucket).download(uploadedPhotoKey(photo.id));
-    if (error) throw error;
-    return Buffer.from(await data.arrayBuffer());
-  }
-  if (/^\/photo-preview\/[a-z0-9-]+\.webp$/i.test(photo.src)) {
-    return readFile(join(process.cwd(), "public", photo.src.slice(1)));
-  }
-  // Only catalog-owned media sources; callers cannot supply a URL or file path.
-  const url = new URL(photo.src);
-  const media = new URL(process.env.NEXT_PUBLIC_MEDIA_BASE_URL || "https://media.isaacjiang.ca");
-  if (url.origin !== media.origin || !url.pathname.startsWith("/camera/")) throw new Error("Unsupported public photo source");
-  const response = await fetch(url, { redirect: "error", cache: "no-store", signal: AbortSignal.timeout(15000) });
-  if (!response.ok || !response.body) throw new Error("Photo unavailable");
-  const chunks: Uint8Array[] = [];
-  let bytes = 0;
-  const reader = response.body.getReader();
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      bytes += value.length;
-      if (bytes > 30_000_000) throw new Error("Photo too large");
-      chunks.push(value);
-    }
-  } finally {
-    await reader.cancel().catch(() => {});
-    reader.releaseLock();
-  }
-  return Buffer.concat(chunks);
+  if (!photo.uploaded) throw new Error("Unsupported v3 photo source");
+  const { data, error } = await createPublicPortfolioClient().storage.from(photoMediaBucket).download(uploadedPhotoKey(photo.id));
+  if (error) throw error;
+  return Buffer.from(await data.arrayBuffer());
 }
 
 export async function GET(_request: Request, { params }: { params: Promise<{ path: string[] }> }) {

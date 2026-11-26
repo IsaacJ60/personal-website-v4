@@ -32,11 +32,11 @@ const image = await sharp({ create: { width: 1600, height: 1200, channels: 3, ba
 function fixture(original = { ContentLength: 100, ContentType: 'image/jpeg', Metadata: { sha256: hash } }) {
   const state = { original, derivativeWrites: 0, inserts: [], originalError: false };
   state.client = {
-    from() { return {
+    from(table) { assert.equal(table, "photo_v3_photos"); return {
       select() { return { eq() { return { async maybeSingle() { return { data: null, error: null }; } }; } }; },
       async insert(row) { state.inserts.push(row); return { error: null }; },
     }; },
-    storage: { from() { return { async upload() { state.derivativeWrites++; return { error: null }; } }; } },
+    storage: { from(bucket) { assert.equal(bucket, "portfolio-v3-media"); return { async upload() { state.derivativeWrites++; return { error: null }; } }; } },
   };
   globalThis.uploadRetentionState = state;
   return state;

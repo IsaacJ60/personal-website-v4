@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Star, X } from "lucide-react";
 import { logout, saveAndPublishPortfolioDraft, saveSelectionDraft, saveSeriesDraft } from "@/app/photo/admin/actions";
 import type { AdminPortfolioPhoto, PortfolioPublication } from "../types";
-import { demoEdits } from "../data/demo";
 import { adminPhotosPath } from "../lib/admin-photos";
 import { useUnsavedChanges } from "../lib/use-unsaved-changes";
 import AdminPhotoLibrary from "./AdminPhotoLibrary";
@@ -126,10 +125,7 @@ export default function SelectionEditor({ collectionId, revision, photos, initia
         <p className={styles.hint}>{details
           ? "Use the star to choose a cover. The arrows change the sequence."
           : "First photograph becomes the cover. Use the arrows to change the order."}</p>
-        {!ids.length && <div className={styles.empty}><p>Choose photographs from the library to start your edit.</p>
-          {!details && <button type="button" disabled={pending} onClick={() => {
-            setIds(demoEdits[0].slugs.flatMap((slug) => photos.find((photo) => photo.slug === slug)?.id ?? [])); setMessage("");
-          }}>Start with demo selection</button>}</div>}
+        {!ids.length && <div className={styles.empty}><p>Choose photographs from the library to start your edit.</p></div>}
         <ol className={styles.sequenceList}>{ids.map((id, index) => {
           const photo = byId.get(id);
           if (!photo) return null;

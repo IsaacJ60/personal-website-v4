@@ -65,7 +65,7 @@ export async function saveSelectionDraft(collectionId: string, revision: string,
   const client = await requirePortfolioAdmin();
   if (typeof collectionId !== "string" || !portfolioUuid.test(collectionId) || typeof revision !== "string" || !Number.isFinite(Date.parse(revision))
     || !validPhotoIds(photoIds)) return { ok: false, message: "The selection couldn’t be saved. Please reload and try again." };
-  const { data, error } = await client.rpc("photo_v2_save_selection_draft", {
+  const { data, error } = await client.rpc("photo_v3_save_selection_draft", {
     p_collection_id: collectionId, p_expected_updated_at: revision, p_photo_ids: photoIds,
   });
   if (error || !data) return { ok: false, message: error?.code === "40001"
@@ -83,7 +83,7 @@ export async function publishPortfolioDraft(id: string, revision: string): Promi
     return { ok: false, message: "This preview is unavailable. Reopen it from the editor." };
   }
 
-  const { data, error } = await client.rpc("photo_v2_publish_draft", {
+  const { data, error } = await client.rpc("photo_v3_publish_draft", {
     p_draft_id: id,
     p_expected_updated_at: revision,
   }).single();
@@ -104,7 +104,7 @@ export async function saveAndPublishPortfolioDraft(
       || (series.coverId !== null && !photoIds.includes(series.coverId))))) {
     return { ok: false, message: "Check the title and selected photographs before publishing." };
   }
-  const { data, error } = await client.rpc("photo_v2_save_and_publish_draft", {
+  const { data, error } = await client.rpc("photo_v3_save_and_publish_draft", {
     p_draft_id: id,
     p_kind: series ? "series" : "selected",
     p_photo_ids: photoIds,
@@ -123,7 +123,7 @@ export async function unpublishPortfolioDraft(id: string, liveRevision: string):
   if (typeof id !== "string" || !portfolioUuid.test(id) || !validRevision(liveRevision)) {
     return { ok: false, message: "Open the latest public version before unpublishing." };
   }
-  const { data, error } = await client.rpc("photo_v2_unpublish_draft", {
+  const { data, error } = await client.rpc("photo_v3_unpublish_draft", {
     p_draft_id: id,
     p_expected_live_updated_at: liveRevision,
   }).single();
@@ -146,7 +146,7 @@ export async function saveSeriesDraft(
     return { ok: false, message: "Check the title, description, and selected photographs before saving." };
   }
 
-  const { data, error } = await client.rpc("photo_v2_save_series_draft", {
+  const { data, error } = await client.rpc("photo_v3_save_series_draft", {
     p_collection_id: collectionId,
     p_title: title.trim(),
     p_description: description.trim(),

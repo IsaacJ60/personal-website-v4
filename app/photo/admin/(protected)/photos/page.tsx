@@ -11,7 +11,7 @@ export default async function AdminPhotosPage({ searchParams }: {
   const [photos, params] = await Promise.all([getAdminPhotoLibrary(), searchParams]);
   const search = readPhotoLibrarySearch(params);
   const client = await requirePortfolioAdmin();
-  const cleanup = await client.from("photo_v2_media_cleanup").select("photo_id", { count: "exact", head: true });
+  const cleanup = await client.from("photo_v3_media_cleanup").select("photo_id", { count: "exact", head: true });
   return <section className={styles.editor}>
     <header className={styles.header}>
       <div><p className={styles.eyebrow}>Portfolio admin</p><h1>Photos</h1></div>
