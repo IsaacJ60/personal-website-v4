@@ -20,8 +20,8 @@ export default async function SeriesTilePreview({ params }: { params: Promise<{ 
     </div>
     <PortfolioPageHeader id="series-preview" title="Series" />
     {cover ? <div className={styles.seriesGrid}>
-      <SeriesCard id={draft.id} title={draft.title} description={draft.description}
-        cover={cover} count={photos.length} href={`${editor}/preview/view`} eager />
+      <SeriesCard id={draft.id} title={draft.title}
+        cover={cover} href={`${editor}/preview/view`} eager />
     </div> : <p>Add photographs to preview this series.</p>}
   </section>;
 }

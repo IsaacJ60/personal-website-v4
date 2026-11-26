@@ -164,13 +164,13 @@ export default function PortfolioViewer({ title, description, photos, isDemo, in
                 const active = position === index;
                 return <div key={item.id} className={`${styles.bufferedPhoto} ${active ? styles.bufferedPhotoActive : ""}`}
                   aria-hidden={!active} inert={!active}>
-                  <PortfolioImage photo={item} eager fetchPriority={active ? "high" : "low"}
+                  <PortfolioImage photo={item} eager showLoading={active} fadeIn fetchPriority={active ? "high" : "low"}
                     imageRef={(image) => {
                       if (image) bufferedImages.current.set(item.id, image);
                       else bufferedImages.current.delete(item.id);
                     }} onReady={markImageReady} />
                 </div>;
-              }) : <PortfolioImage photo={photo} eager />}
+              }) : <PortfolioImage photo={photo} eager showLoading fadeIn />}
             </div>
             {fullscreen && <button className={styles.fullscreenExit} onClick={toggleFullscreen} type="button" aria-label="Exit fullscreen"><Minimize2 size={20} /></button>}
           </div>
