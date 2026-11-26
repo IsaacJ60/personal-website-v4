@@ -148,7 +148,7 @@ export default function PortfolioViewer({ title, description, photos, isDemo, in
           <div className={styles.contactSheet}>
             {photos.map((item, position) => <button key={item.id} type="button" className={styles.indexItem}
               onClick={() => { navigate(position); setMode("view"); requestAnimationFrame(() => stage.current?.focus()); }}>
-              <span className={styles.indexImage}><PortfolioImage photo={item} thumbnail /></span>
+              <span className={styles.indexImage}><PortfolioImage photo={item} thumbnail showLoading /></span>
               <span className={styles.indexCaption}><span>{item.title}</span><span>{String(position + 1).padStart(2, "0")}</span></span>
             </button>)}
           </div>
