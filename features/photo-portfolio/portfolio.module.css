@@ -201,7 +201,7 @@
 .contactLink span { text-decoration: underline; text-decoration-color: var(--link-rule); text-underline-offset: 5px; overflow-wrap: anywhere; }
 .contactLink svg { flex-shrink: 0; color: var(--muted); }
 .contactLink:hover span { text-decoration-color: var(--ink); }
-.seriesGrid { display: grid; grid-template-columns: repeat(3,minmax(0,340px)); justify-content: center; gap: 40px 28px; }
+.seriesGrid { display: grid; grid-template-columns: repeat(3,minmax(0,340px)); justify-content: center; gap: 40px 28px; padding-top: clamp(16px, 2vw, 28px); }
 .seriesImage { display: block; position: relative; aspect-ratio: var(--photo-thumbnail-ratio); }
 .seriesPlaceholder { border: 1px solid var(--rule); }
 .seriesPlaceholderTitle { display: block; width: 96px; height: 14px; margin: 15px auto 5px; border-radius: 2px; background: var(--rule); }
